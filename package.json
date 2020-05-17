@@ -1,0 +1,34 @@
+{
+  "name": "@mintpond/mint-beam",
+  "version": "0.1.0",
+  "description": "Beam Coin API clients and utils for NodeJS",
+  "author": "JCThePants",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@mintpond/mint-precon": "^1.0.0",
+    "@mintpond/mint-socket": "^1.0.0",
+    "@mintpond/mint-utils": "^2.0.0"
+  },
+  "devDependencies": {
+    "async": "1.5.2",
+    "mocha": "^7.1.2"
+  },
+  "scripts": {
+    "test": "mocha tests/mocha.*"
+  },
+  "homepage": "https://github.com/MintPond/mint-beam",
+  "bugs": {
+    "url": "https://github.com/MintPond/mint-beam/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MintPond/mint-beam.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "engines": {
+    "node": ">=10.17.0"
+  }
+}
