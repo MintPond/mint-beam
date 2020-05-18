@@ -7,19 +7,30 @@ const
     BeamAddressExpire = require('./../libs/const.BeamAddressExpire'),
     BeamTxStatus = require('./../libs/const.BeamTxStatus');
 
+const HTTP_HOST = '127.0.0.1';
 const HTTP_PORT = 8989;
+const TIMEOUT = 1;
+const IS_SECURE = false;
 
 let client;
+let httpResponseStatusCode;
 let httpServer;
 let apiReceiverFn;
 let httpResponse = {};
 
 function globalBe() {
     apiReceiverFn = () => {};
+    httpResponseStatusCode = 200;
     client = new BeamWalletClient({
-        host: '127.0.0.1',
-        port: HTTP_PORT
+        host: HTTP_HOST,
+        port: HTTP_PORT,
+        timeout: TIMEOUT,
+        isSecure: IS_SECURE
     });
+}
+
+function globalAe() {
+    client.removeAllListeners();
 }
 
 
@@ -31,7 +42,7 @@ describe('BeamWalletClient', () => {
                 apiReceiverFn(req.method, JSON.parse(chunk.toString()));
             });
             req.on('end', function(){
-                res.writeHead(200, { "Content-Type": "application/json" });
+                res.writeHead(httpResponseStatusCode, { "Content-Type": "application/json" });
                 res.end(JSON.stringify(httpResponse));
             });
         });
@@ -42,8 +53,30 @@ describe('BeamWalletClient', () => {
         httpServer.close();
     });
 
+    context('properties', () => {
+        beforeEach(globalBe);
+        afterEach(globalAe);
+
+        it('should return correct value for host property', () => {
+            assert.strictEqual(client.host, HTTP_HOST);
+        });
+
+        it('should return correct value for port property', () => {
+            assert.strictEqual(client.port, HTTP_PORT);
+        });
+
+        it('should return correct value for timeout property', () => {
+            assert.strictEqual(client.timeout, TIMEOUT);
+        });
+
+        it('should return correct value for isSecure property', () => {
+            assert.strictEqual(client.isSecure, IS_SECURE);
+        });
+    });
+
     describe('createAddress function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -87,10 +120,133 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            });
+        });
     });
 
     describe('validateAddress function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -130,10 +286,127 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
     });
 
     describe('addrList function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -173,10 +446,127 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.addrList({
+                own: true,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.addrList({
+                own: true,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.addrList({
+                own: true,
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.addrList({
+                own: true,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.addrList({
+                own: true,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.addrList({
+                own: true,
+                callback: () => {}
+            });
+        });
     });
 
     describe('deleteAddress function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -216,10 +606,127 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => {}
+            });
+        });
     });
 
     describe('editAddress function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -267,10 +774,139 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            });
+        });
     });
 
     describe('txSend function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -330,10 +966,157 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
     });
 
     describe('txSplit function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -385,10 +1168,139 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
     });
 
     describe('txCancel function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -428,10 +1340,127 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
     });
 
     describe('txStatus function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -471,10 +1500,127 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
     });
 
     describe('txList function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -533,10 +1679,133 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            });
+        });
     });
 
     describe('walletStatus function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -571,10 +1840,121 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.walletStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.walletStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.walletStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.walletStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.walletStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.walletStatus({
+                callback: () => {}
+            });
+        });
     });
 
     describe('getUTXO function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -618,10 +1998,133 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            });
+        });
     });
 
     describe('generateTxId function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -656,10 +2159,121 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.generateTxId({
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.generateTxId({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.generateTxId({
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.generateTxId({
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.generateTxId({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.generateTxId({
+                callback: () => {}
+            });
+        });
     });
 
     describe('exportPaymentProof function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -699,10 +2313,127 @@ describe('BeamWalletClient', () => {
                 callback: () => { done(); }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => {}
+            });
+        });
     });
 
     describe('verifyPaymentProof function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponse = { error: { code: -1 }};
@@ -740,6 +2471,122 @@ describe('BeamWalletClient', () => {
             client.verifyPaymentProof({
                 paymentProof: 'proof',
                 callback: () => { done(); }
+            });
+        });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => {}
             });
         });
     });

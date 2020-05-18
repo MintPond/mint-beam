@@ -7,7 +7,10 @@ const
     JsonSocket = require('@mintpond/mint-socket').JsonSocket,
     BeamMiningClient = require('./../libs/class.BeamMiningClient');
 
+const HOST = '127.0.0.1';
 const PORT = 8988;
+const API_KEY = '123'
+const IS_SECURE = false;
 
 let socket;
 let client;
@@ -18,31 +21,36 @@ let apiSendFn;
 function globalBe() {
     apiReceiverFn = () => {};
     client = new BeamMiningClient({
-        host: '127.0.0.1',
+        host: HOST,
         port: PORT,
-        apiKey: '123',
-        useTLS: false
+        apiKey: API_KEY,
+        isSecure: IS_SECURE
     });
 }
 
 function connectBe(done) {
+    setupLogin();
+    client.connect(() => { done() });
+}
+
+function globalAe() {
+    client.removeAllListeners();
+    client.disconnect();
+    socket = null;
+}
+
+function setupLogin() {
     apiReceiverFn = (message) => {
-        if (message.id === 'login') {
+        if (message.method === 'login') {
             apiSendFn({
-                id: 'login',
                 jsonrpc: '2.0',
                 method: 'result',
+                id: 'login',
                 code: 0,
                 description: 'success'
             });
         }
     };
-    client.connect(() => { done() });
-}
-
-function globalAe() {
-    client.disconnect();
-    socket = null;
 }
 
 
@@ -92,6 +100,38 @@ describe('BeamStratumClient', () => {
                 difficulty: 16777216/*packed*/
             });
         });
+
+        it('should return correct value from defaultHost property', () => {
+            assert.strictEqual(client.defaultHost, HOST);
+        });
+
+        it('should return correct value from defaultPort property', () => {
+            assert.strictEqual(client.defaultPort, PORT);
+        });
+
+        it('should return correct value from defaultApiKey property', () => {
+            assert.strictEqual(client.defaultApiKey, API_KEY);
+        });
+
+        it('should return correct value from defaultIsSecure property', () => {
+            assert.strictEqual(client.defaultIsSecure, IS_SECURE);
+        });
+
+        it('should return correct value from host property', () => {
+            assert.strictEqual(client.host, HOST);
+        });
+
+        it('should return correct value from port property', () => {
+            assert.strictEqual(client.port, PORT);
+        });
+
+        it('should return correct value from apiKey property', () => {
+            assert.strictEqual(client.apiKey, API_KEY);
+        });
+
+        it('should return correct value from isSecure property', () => {
+            assert.strictEqual(client.isSecure, IS_SECURE);
+        });
     });
 
     describe('connect function', () => {
@@ -108,12 +148,137 @@ describe('BeamStratumClient', () => {
 
         it('should login to stratum server', done => {
             apiReceiverFn = (message) => {
-                assert.strictEqual(message.api_key, '123');
+                assert.strictEqual(message.api_key, API_KEY);
                 assert.strictEqual(message.id, 'login');
                 assert.strictEqual(message.jsonrpc, '2.0');
                 assert.strictEqual(message.method, 'login');
                 done();
             };
+            client.connect();
+        });
+
+        it('should callback correctly', done => {
+            setupLogin();
+            client.connect((err) => {
+                assert.strictEqual(!!err, false);
+                done();
+            });
+        });
+
+        it('should callback socket error correctly', done => {
+            client._port = 2;
+            client.connect((err) => {
+                assert.strictEqual(!!err, true);
+                done();
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR if failed to connect to server', done => {
+            client._port = 2;
+            client.on(BeamMiningClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(!!ev.error, true);
+                done();
+            });
+            client.connect();
+        });
+
+        it('should emit EVENT_SOCKET_DISCONNECT if failed to connect to server', done => {
+            client._port = 2;
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                assert.strictEqual(ev.host, HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.isSecure, IS_SECURE);
+                assert.strictEqual(ev.reconnectCount, 0);
+                done();
+            });
+            client.connect();
+        });
+
+        it('should reconnect when EVENT_SOCKET_DISCONNECT reconnect function is called', function (done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    ev.reconnect();
+                }
+                else if (ev.reconnectCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.connect();
+        });
+
+        it('should callback correctly on reconnect when EVENT_SOCKET_DISCONNECT reconnect function is called', function (done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    ev.reconnect(() => {
+                        done();
+                    });
+                }
+                else if (ev.reconnectCount !== 1) {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.connect();
+        });
+
+        it('should modify connect args when EVENT_SOCKET_DISCONNECT reconnect function is called with args', function (done) {
+            this.timeout(7000);
+            client._port = 2;
+            setupLogin();
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    ev.reconnect({
+                        host: 'localhost',
+                        port: PORT
+                    }, (err) => {
+                        assert.strictEqual(client.host, 'localhost');
+                        assert.strictEqual(client.port, PORT);
+                        assert.strictEqual(!!err, false);
+                        done();
+                    });
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.connect();
+        });
+
+        it('should correctly handle multiple reconnect calls from EVENT_SOCKET_DISCONNECT', function (done) {
+            this.timeout(7000);
+            client._port = 2;
+            setupLogin();
+            let callCount = 0;
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    ev.reconnect(() => {
+                        callCount++;
+                    });
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    ev.reconnect({
+                        port: PORT
+                    }, () => {
+                        callCount++;
+                        assert.strictEqual(callCount, 2);
+                        done();
+                    });
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
             client.connect();
         });
     });

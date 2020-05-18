@@ -7,6 +7,7 @@ const
     precon = require('@mintpond/mint-precon'),
     TcpSocket = require('@mintpond/mint-socket').TcpSocket,
     JsonSocket = require('@mintpond/mint-socket').JsonSocket,
+    mu = require('@mintpond/mint-utils'),
     pu = require('@mintpond/mint-utils').prototypes,
     beamDiff = require('./service.beamDiff');
 
@@ -24,13 +25,13 @@ class BeamMiningClient extends EventEmitter {
      * @param args.host {string}
      * @param args.port {number}
      * @param args.apiKey {string}
-     * @param args.useTLS {boolean}
+     * @param [args.isSecure=false] {boolean}
      */
     constructor(args) {
         precon.string(args.host, 'host');
         precon.minMaxInteger(args.port, 1, 65535, 'port');
         precon.string(args.apiKey, 'apiKey');
-        precon.boolean(args.useTLS, 'useTLS');
+        precon.opt_boolean(args.isSecure, 'isSecure');
 
         super();
 
@@ -38,11 +39,13 @@ class BeamMiningClient extends EventEmitter {
         _._host = args.host;
         _._port = args.port;
         _._apiKey = args.apiKey;
-        _._useTLS = args.useTLS;
+        _._isSecure = !!args.isSecure;
 
+        _._connectArgs = _.$createConnectArgs();
         _._socket = null;
         _._replyMap = new Map();
         _._currentJob = null;
+        _._isConnected = false;
     }
 
 
@@ -88,43 +91,93 @@ class BeamMiningClient extends EventEmitter {
      */
     get currentJob() { return this._currentJob; }
 
+    /**
+     * Determine if the client is currently connected or connecting to the mining node.
+     * @returns {boolean}
+     */
+    get isConnected() { return this._isConnected; }
 
     /**
-     * Connect to the Beam node stratum.
+     * Get the default host.
+     * @returns {string}
+     */
+    get defaultHost() { return this._host; }
+
+    /**
+     * Get the default port value.
+     * @returns {number}
+     */
+    get defaultPort() { return this._port; }
+
+    /**
+     * Get the default API key value.
+     * @returns {string}
+     */
+    get defaultApiKey() { return this._apiKey; }
+
+    /**
+     * Get the default secure connection value.
+     * @returns {boolean}
+     */
+    get defaultIsSecure() { return this._isSecure; }
+
+    /**
+     * Get the current host value.
+     * @returns {string}
+     */
+    get host() { return this._connectArgs.host; }
+
+    /**
+     * Get the current port value.
+     * @returns {number}
+     */
+    get port() { return this._connectArgs.port; }
+
+    /**
+     * Get the current API key value.
+     * @returns {string}
+     */
+    get apiKey() { return this._connectArgs.apiKey; }
+
+    /**
+     * Get the current secure connection value.
+     * @returns {boolean}
+     */
+    get isSecure() { return this._connectArgs.isSecure; }
+
+
+    /**
+     * Connect to the Beam mining node.
      *
-     * @param [callback] {function()}
+     * @param [callback] {function(err:*)}
      */
     connect(callback) {
         precon.opt_funct(callback, 'callback');
 
         const _ = this;
 
-        if (_._socket)
-            throw new Error('Already connected.');
+        if (_._isConnected)
+            throw new Error('Already connected or connecting.');
 
-        const netSocket = _._createConnection(() => {
-            _._login((err) => {
-                callback && callback(err);
-                callback = null;
-            });
-        });
+        _._isConnected = true;
+        _._connectArgs = _.$createConnectArgs();
 
-        _._socket = new JsonSocket({ netSocket: netSocket });
-        _._socket.on(TcpSocket.EVENT_DISCONNECT, _._onEnd.bind(_));
-        _._socket.on(TcpSocket.EVENT_ERROR, _._onError.bind(_));
-        _._socket.on(TcpSocket.EVENT_MESSAGE_IN, _._onMessage.bind(_));
+        _._connect(_._connectArgs, callback);
     }
 
 
     /**
-     * Disconnect from Beam node stratum.
+     * Disconnect from Beam mining node.
      */
     disconnect() {
         const _ = this;
+
+        _._isConnected = false;
         if (!_._socket)
             return;
 
         _._socket.destroy();
+        _._socket = null;
     }
 
 
@@ -185,21 +238,120 @@ class BeamMiningClient extends EventEmitter {
     }
 
 
-    _createConnection(onConnectFn) {
-        const _ = this;
-        return _._useTLS
-            ? tls.connect(_._port, _._host, {}, onConnectFn)
-            : net.connect(_._port, _._host, onConnectFn);
+    $createConnection(connectArgs, onConnectFn) {
+        const host = connectArgs.host;
+        const port = connectArgs.port;
+        const isSecure = connectArgs.isSecure;
+
+        return isSecure
+            ? tls.connect(port, host, {}, onConnectFn)
+            : net.connect(port, host, onConnectFn);
     }
 
 
-    _login(callback) {
+    $createConnectArgs() {
+        const _ = this;
+        return {
+            host: _._host,
+            port: _._port,
+            apiKey: _._apiKey,
+            isSecure: _._isSecure,
+            reconnectCount: 0
+        };
+    }
+
+
+    $onError(ev) {
+        const _ = this;
+        _.emit(BeamMiningClient.EVENT_SOCKET_ERROR, ev);
+    }
+
+
+    $onDisconnect() {
+        const _ = this;
+        let shouldReconnect = false;
+        let reconnectCallbackArr = [];
+        _.emit(BeamMiningClient.EVENT_SOCKET_DISCONNECT, {
+            ..._._connectArgs,
+            reconnect(args, callback) {
+
+                if (mu.isFunction(args)) {
+                    callback = args;
+                    args = null;
+                }
+
+                if (mu.isFunction(callback))
+                    reconnectCallbackArr.push(callback);
+
+                _._connectArgs = {
+                    ..._.$createConnectArgs(),
+                    ...args,
+                    reconnectCount: _._connectArgs.reconnectCount
+                };
+                shouldReconnect = true;
+            }
+        });
+
+        _._socket = null;
+
+        if (shouldReconnect) {
+            _._connectArgs.reconnectCount++;
+            _._isConnected = true;
+            _._connect(_._connectArgs, err => {
+                reconnectCallbackArr.forEach(callback => { callback(err) });
+            });
+        }
+        else {
+            for (const fnArr of _._replyMap.values()) {
+                fnArr.forEach(fn => {
+                    fn(new Error('Disconnected'));
+                });
+            }
+            _._replyMap.clear();
+            _._socket = null;
+        }
+    }
+
+
+    _connect(connectArgs, callback) {
+
+        const _ = this;
+
+        const netSocket = _.$createConnection(connectArgs, () => {
+
+            netSocket.off('error', onConnectError);
+
+            _._login(connectArgs.apiKey, (err) => {
+
+                if (!err)
+                    connectArgs.reconnectCount = 0;
+
+                callback && callback(err);
+                callback = null;
+            });
+        });
+
+        netSocket.once('error', onConnectError);
+
+        function onConnectError(err) {
+            callback && callback(err);
+            callback = null;
+        }
+
+        _._socket = new JsonSocket({ netSocket: netSocket });
+        _._socket.on(TcpSocket.EVENT_DISCONNECT, _.$onDisconnect.bind(_));
+        _._socket.on(TcpSocket.EVENT_ERROR, _.$onError.bind(_));
+        _._socket.on(TcpSocket.EVENT_MESSAGE_IN, _._onMessage.bind(_));
+    }
+
+
+    _login(apiKey, callback) {
 
         const _ = this;
         _._send({
             id: 'login',
             method: 'login',
-            api_key: _._apiKey,
+            api_key: apiKey,
             jsonrpc: '2.0'
         }, (reply) => {
             if (reply.code === 0/*Success*/) {
@@ -254,28 +406,6 @@ class BeamMiningClient extends EventEmitter {
                 _.emit(BeamMiningClient.EVENT_UNKNOWN_METHOD, msg);
                 break;
         }
-    }
-
-
-    _onError(ev) {
-        const _ = this;
-        _.emit(BeamMiningClient.EVENT_SOCKET_ERROR, ev);
-    }
-
-
-    _onEnd() {
-        const _ = this;
-
-        _.emit(BeamMiningClient.EVENT_SOCKET_DISCONNECT);
-
-        _._socket = null;
-        for (const fnArr of _._replyMap.values()) {
-            fnArr.forEach(fn => {
-                fn('Disconnected');
-            });
-        }
-        _._replyMap.clear();
-        _._socket = null;
     }
 
 

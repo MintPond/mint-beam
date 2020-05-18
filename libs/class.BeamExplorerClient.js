@@ -1,6 +1,7 @@
 'use strict';
 
 const
+    EventEmitter = require('events'),
     http = require('http'),
     https = require('https'),
     precon = require('@mintpond/mint-precon'),
@@ -11,7 +12,7 @@ const
  * Beam Explorer API client.
  * https://github.com/BeamMW/beam/wiki/Beam-Node-Explorer-API
  */
-class BeamExplorerClient {
+class BeamExplorerClient extends EventEmitter {
 
     /**
      * Constructor.
@@ -19,18 +20,62 @@ class BeamExplorerClient {
      * @param args
      * @param args.host {string}
      * @param args.port {number}
-     * @param [args.isSecure] {boolean}
+     * @param [args.timeout=15] {number}
+     * @param [args.isSecure=false] {boolean}
      */
     constructor(args) {
         precon.string(args.host, 'string');
         precon.minMaxInteger(args.port, 1, 65535, 'port');
+        precon.opt_positiveNumber(args.timeout, 'timeout');
         precon.opt_boolean(args.isSecure, 'boolean');
+
+        super();
 
         const _ = this;
         _._host = args.host;
         _._port = args.port;
+        _._timeout = args.timeout || 15;
         _._isSecure = !!args.isSecure;
     }
+
+
+    /**
+     * The name of the event emitted when an error occurs.
+     * @returns {string}
+     */
+    static get EVENT_SOCKET_ERROR() { return 'socketError' }
+
+
+    /**
+     * The name of the event emitted when the API server responds with a status code other than 200.
+     * @returns {string}
+     */
+    static get EVENT_API_ERROR() { return 'apiError' }
+
+
+    /**
+     * Get the host value.
+     * @returns {string}
+     */
+    get host() { return this._host; }
+
+    /**
+     * Get the port value.
+     * @returns {number}
+     */
+    get port() { return this._port; }
+
+    /**
+     * Get the timeout value.
+     * @returns {number}
+     */
+    get timeout() { return this._timeout; }
+
+    /**
+     * Get the secure connection value.
+     * @returns {boolean}
+     */
+    get isSecure() { return this._isSecure; }
 
 
     /**
@@ -52,7 +97,7 @@ class BeamExplorerClient {
         const _ = this;
         const callback = args.callback;
 
-        _._get(`status`, callback);
+        _._get(`status`, _.$createConnectArgs(), callback);
     }
 
 
@@ -94,7 +139,7 @@ class BeamExplorerClient {
         const id = args.id;
         const callback = args.callback;
 
-        _._get(`block?hash=${id}`, callback);
+        _._get(`block?hash=${id}`, _.$createConnectArgs(), callback);
     }
 
 
@@ -136,7 +181,7 @@ class BeamExplorerClient {
         const height = args.height;
         const callback = args.callback;
 
-        _._get(`block?height=${height}`, callback);
+        _._get(`block?height=${height}`, _.$createConnectArgs(), callback);
     }
 
 
@@ -178,7 +223,7 @@ class BeamExplorerClient {
         const id = args.id;
         const callback = args.callback;
 
-        _._get(`block?kernel=${id}`, callback);
+        _._get(`block?kernel=${id}`, _.$createConnectArgs(), callback);
     }
 
 
@@ -223,40 +268,109 @@ class BeamExplorerClient {
         const count = args.count;
         const callback = args.callback;
 
-        _._get(`blocks?height=${height}&n=${count}`, callback);
+        _._get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs(), callback);
     }
 
 
-    $handleResponseError(res, callback) {
-        const error = new Error(res.statusMessage);
-        error.statusCode = res.statusCode
-        callback && callback(error);
-        callback = null;
-    }
-
-
-    $handleError(err, callback) {
-        callback(err);
-    }
-
-
-    _get(path, callback) {
+    $createConnectArgs() {
         const _ = this;
-
-        const options = {
+        return {
             host: _._host,
             port: _._port,
+            timeout: _._timeout,
+            isSecure: _._isSecure,
+            retryCount: 0
+        };
+    }
+
+
+    $createHttpOptions(connectArgs, path) {
+        const host = connectArgs.host;
+        const port = connectArgs.port;
+        const timeout = connectArgs.timeout;
+
+        return {
+            host: host,
+            port: port,
             path: `/${path}`,
             method: 'GET',
+            timeout: timeout * 1000,
             headers: {
                 'Content-Type': 'application/json'
             }
         };
+    }
 
-        const req = (_._isSecure ? https : http).request(options, (res) => {
+
+    $handleApiError(res, path, connectArgs, callback) {
+        const _ = this;
+
+        const error = new Error(res.statusMessage);
+        error.statusCode = res.statusCode
+
+        let shouldRetry = false;
+        const ev = {
+            ...connectArgs,
+            get error() { return error },
+            get statusCode() { return res.statusCode },
+            get path() { return path },
+            get res() { return res },
+            retry: (args) => {
+                connectArgs = {
+                    ..._.$createConnectArgs(),
+                    ...args
+                };
+                shouldRetry = true;
+            }
+        };
+        _.emit(BeamExplorerClient.EVENT_API_ERROR, ev);
+
+        if (shouldRetry) {
+            connectArgs.retryCount++;
+            _._get(path, connectArgs, callback);
+        }
+        else {
+            callback(error);
+        }
+    }
+
+
+    $handleSocketError(err, path, connectArgs, callback) {
+        const _ = this;
+        let shouldRetry = false;
+        const ev = {
+            ...connectArgs,
+            get error() { return err },
+            get path() { return path },
+            retry: (args) => {
+                connectArgs = {
+                    ..._.$createConnectArgs(),
+                    ...args
+                };
+                shouldRetry = true;
+            }
+        };
+        _.emit(BeamExplorerClient.EVENT_SOCKET_ERROR, ev);
+
+        if (shouldRetry) {
+            connectArgs.retryCount++;
+            _._get(path, connectArgs, callback);
+        }
+        else {
+            callback(err);
+        }
+    }
+
+
+    _get(path, connectArgs, callback) {
+        const _ = this;
+        const isSecure = connectArgs.isSecure;
+        const options = _.$createHttpOptions(connectArgs, path);
+
+        const req = (isSecure ? https : http).request(options, (res) => {
 
             if (res.statusCode !== 200) {
-                callback && _.$handleResponseError(res, callback);
+                callback && _.$handleApiError(res, path, connectArgs, callback);
                 callback = null;
                 return;
             }
@@ -271,7 +385,7 @@ class BeamExplorerClient {
         });
 
         req.on('error', err => {
-            callback && _.$handleError(err, callback);
+            callback && _.$handleSocketError(err, path, connectArgs, callback);
             callback = null;
         });
 

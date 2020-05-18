@@ -1,6 +1,7 @@
 'use strict';
 
 const
+    EventEmitter = require('events'),
     http = require('http'),
     https = require('https'),
     precon = require('@mintpond/mint-precon'),
@@ -14,7 +15,7 @@ const
  * Beam wallet API client.
  * https://github.com/BeamMW/beam/wiki/Beam-wallet-protocol-API
  */
-class BeamWalletClient {
+class BeamWalletClient extends EventEmitter {
 
     /**
      * Constructor.
@@ -22,31 +23,59 @@ class BeamWalletClient {
      * @param args
      * @param args.host {strings}
      * @param args.port {number}
-     * @param [args.isSecure] {boolean}
+     * @param [args.timeout=15] {number}
+     * @param [args.isSecure=false] {boolean}
      */
     constructor(args) {
         precon.string(args.host, 'host');
         precon.minMaxInteger(args.port, 1, 65535, 'port');
+        precon.opt_positiveInteger(args.timeout, 'timeout');
         precon.opt_boolean(args.isSecure, 'isSecure');
+
+        super();
 
         const _ = this;
         _._host = args.host;
         _._port = args.port;
+        _._timeout = args.timeout || 15;
         _._isSecure = args.isSecure;
     }
 
 
     /**
+     * The name of the event emitted when an error occurs.
+     * @returns {string}
+     */
+    static get EVENT_SOCKET_ERROR() { return 'socketError' }
+
+
+    /**
+     * The name of the event emitted when the API server responds with a status code other than 200.
+     * @returns {string}
+     */
+    static get EVENT_API_ERROR() { return 'apiError' }
+
+
+    /**
+     * Get the host value.
      * @returns {string}
      */
     get host() { return this._host; }
 
     /**
-     * @returns {port}
+     * Get the port value.
+     * @returns {number}
      */
     get port() { return this._port; }
 
     /**
+     * Get the timeout value.
+     * @returns {number}
+     */
+    get timeout() { return this._timeout; }
+
+    /**
+     * Get the secure connection value.
      * @returns {boolean}
      */
     get isSecure() { return this._isSecure; }
@@ -78,7 +107,7 @@ class BeamWalletClient {
                 expiration: expire,
                 comment: comment
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -105,7 +134,7 @@ class BeamWalletClient {
             params: {
                 address: address
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -140,7 +169,7 @@ class BeamWalletClient {
             params: {
                 own: own
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -166,7 +195,7 @@ class BeamWalletClient {
             params: {
                 address: address
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -200,7 +229,7 @@ class BeamWalletClient {
                 comment: comment,
                 expiration: expire
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -246,7 +275,7 @@ class BeamWalletClient {
                 comment: comment,
                 txId: mu.isString(txId) ? txId : undefined
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -279,7 +308,7 @@ class BeamWalletClient {
                 fee: mu.isNumber(fee) ? fee : undefined,
                 txId: mu.isString(txId) ? txId : undefined
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -305,7 +334,7 @@ class BeamWalletClient {
             params: {
                 txId: txId
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -334,7 +363,7 @@ class BeamWalletClient {
             params: {
                 txId: txId
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -384,7 +413,7 @@ class BeamWalletClient {
                 skip: skip || 0,
                 count: mu.isNumber(count) ? count : undefined
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -413,7 +442,7 @@ class BeamWalletClient {
             jsonrpc: '2.0',
             id: 1,
             method: 'wallet_status'
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -453,7 +482,7 @@ class BeamWalletClient {
                 count: mu.isNumber(count) ? count : undefined,
                 skip: skip || 0
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -473,7 +502,7 @@ class BeamWalletClient {
             jsonrpc: '2.0',
             id: 1,
             method: 'generate_tx_id'
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -499,7 +528,7 @@ class BeamWalletClient {
             params: {
                 txId: txId
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
@@ -532,32 +561,31 @@ class BeamWalletClient {
             params: {
                 payment_proof: paymentProof
             }
-        }, callback);
+        }, _.$createConnectArgs(), callback);
     }
 
 
-    $handleResponseError(res, callback) {
-        const error = new Error(res.statusMessage);
-        error.statusCode = res.statusCode
-        callback && callback(error);
-        callback = null;
-    }
-
-
-    $handleError(err, callback) {
-        callback(err);
-    }
-
-
-    _post(reqObj, callback) {
-
+    $createConnectArgs() {
         const _ = this;
-
-        const data = JSON.stringify(reqObj);
-
-        const options = {
+        return {
             host: _._host,
             port: _._port,
+            timeout: _._timeout,
+            isSecure: _._isSecure,
+            retryCount: 0
+        };
+    }
+
+
+    $createHttpOptions(connectArgs, data) {
+        const host = connectArgs.host;
+        const port = connectArgs.port;
+        const timeout = connectArgs.timeout;
+
+        return {
+            host: host,
+            port: port,
+            timeout: timeout * 1000,
             path: '/api/wallet',
             method: 'POST',
             headers: {
@@ -565,11 +593,79 @@ class BeamWalletClient {
                 'Content-Length': Buffer.byteLength(data)
             }
         };
+    }
 
-        const req = (_._isSecure ? https : http).request(options, (res) => {
+
+    $handleApiError(res, reqObj, connectArgs, callback) {
+        const _ = this;
+        const error = new Error(res.statusMessage);
+        error.statusCode = res.statusCode
+
+        let shouldRetry = false;
+        const ev = {
+            ...connectArgs,
+            get error() { return error },
+            get statusCode() { return res.statusCode },
+            get reqObj() { return reqObj },
+            get res() { return res },
+            retry: (args) => {
+                connectArgs = {
+                    ..._.$createConnectArgs(),
+                    ...args
+                };
+                shouldRetry = true;
+            }
+        };
+        _.emit(BeamWalletClient.EVENT_API_ERROR, ev);
+
+        if (shouldRetry) {
+            connectArgs.retryCount++;
+            _._post(reqObj, connectArgs, callback);
+        }
+        else {
+            callback(error);
+        }
+    }
+
+
+    $handleSocketError(err, reqObj, connectArgs, callback) {
+        const _ = this;
+        let shouldRetry = false;
+        const ev = {
+            ...connectArgs,
+            get error() { return err },
+            get reqObj() { return reqObj },
+            retry: (args) => {
+                connectArgs = {
+                    ..._.$createConnectArgs(),
+                    ...args
+                };
+                shouldRetry = true;
+            }
+        };
+        _.emit(BeamWalletClient.EVENT_SOCKET_ERROR, ev);
+
+        if (shouldRetry) {
+            connectArgs.retryCount++;
+            _._post(reqObj, connectArgs, callback);
+        }
+        else {
+            callback(err);
+        }
+    }
+
+
+    _post(reqObj, connectArgs, callback) {
+
+        const _ = this;
+        const isSecure = connectArgs.isSecure;
+
+        const data = JSON.stringify(reqObj);
+        const options = _.$createHttpOptions(connectArgs, data);
+        const req = (isSecure ? https : http).request(options, (res) => {
 
             if (res.statusCode !== 200) {
-                callback && _.$handleResponseError(res, callback);
+                callback && _.$handleApiError(res, reqObj, connectArgs, callback);
                 callback = null;
                 return;
             }
@@ -584,8 +680,7 @@ class BeamWalletClient {
                     toJSON() {
                         return {
                             ...parsed.error,
-                            host: _._host,
-                            port: _._port,
+                            connectArgs: connectArgs,
                             req: reqObj
                         };
                     }
@@ -595,7 +690,7 @@ class BeamWalletClient {
         });
 
         req.on('error', err => {
-            callback && _.$handleError(err, callback);
+            callback && _.$handleSocketError(err, reqObj, connectArgs, callback);
             callback = null;
         });
 

@@ -5,7 +5,10 @@ const
     http = require('http'),
     BeamExplorerClient = require('./../libs/class.BeamExplorerClient');
 
+const HTTP_HOST = '127.0.0.1';
 const HTTP_PORT = 8987;
+const TIMEOUT = 1;
+const IS_SECURE = false;
 
 let client;
 let httpServer;
@@ -17,9 +20,15 @@ function globalBe() {
     httpResponseStatusCode = 200;
     apiReceiverFn = () => {};
     client = new BeamExplorerClient({
-        host: '127.0.0.1',
-        port: HTTP_PORT
+        host: HTTP_HOST,
+        port: HTTP_PORT,
+        timeout: TIMEOUT,
+        isSecure: IS_SECURE
     });
+}
+
+function globalAe() {
+    client.removeAllListeners();
 }
 
 
@@ -41,8 +50,30 @@ describe('BeamExplorerClient', () => {
         httpServer.close();
     });
 
+    context('properties', () => {
+        beforeEach(globalBe);
+        afterEach(globalAe);
+
+        it('should return correct value for host property', () => {
+            assert.strictEqual(client.host, HTTP_HOST);
+        });
+
+        it('should return correct value for port property', () => {
+            assert.strictEqual(client.port, HTTP_PORT);
+        });
+
+        it('should return correct value for timeout property', () => {
+            assert.strictEqual(client.timeout, TIMEOUT);
+        });
+
+        it('should return correct value for isSecure property', () => {
+            assert.strictEqual(client.isSecure, IS_SECURE);
+        });
+    });
+
     describe('getStatus function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponseStatusCode = 404;
@@ -76,10 +107,123 @@ describe('BeamExplorerClient', () => {
                 callback: () => { }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.path, 'status');
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.path, 'status');
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
     });
 
     describe('getBlock function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponseStatusCode = 404;
@@ -116,10 +260,128 @@ describe('BeamExplorerClient', () => {
                 callback: () => { }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.path, 'block?hash=abc');
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.path, 'block?hash=abc');
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
     });
 
     describe('getBlockAt function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponseStatusCode = 404;
@@ -156,10 +418,129 @@ describe('BeamExplorerClient', () => {
                 callback: () => { }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.path, 'block?height=10');
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.path, 'block?height=10');
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
     });
 
     describe('getBlockByKernel function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponseStatusCode = 404;
@@ -196,10 +577,129 @@ describe('BeamExplorerClient', () => {
                 callback: () => { }
             });
         });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.path, 'block?kernel=abc');
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.path, 'block?kernel=abc');
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
     });
 
     describe('getBlocks function', () => {
         beforeEach(globalBe);
+        afterEach(globalAe);
 
         it('should callback error correctly', done => {
             httpResponseStatusCode = 404;
@@ -233,6 +733,130 @@ describe('BeamExplorerClient', () => {
                 assert.strictEqual(req.url, '/blocks?height=10&n=3');
                 done();
             };
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_ERROR on status code other than 200', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.path, 'blocks?height=10&n=3');
+                assert.strictEqual(ev.statusCode, 404);
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, HTTP_PORT);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should retry when EVENT_API_ERROR retry function is called', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
+            httpResponseStatusCode = 404;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, HTTP_PORT);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
+            this.timeout(7000);
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.path, 'blocks?height=10&n=3');
+                assert.strictEqual(ev.host, HTTP_HOST);
+                assert.strictEqual(ev.port, 2);
+                assert.strictEqual(ev.retryCount, 0);
+                done();
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should retry when EVENT_SOCKET_ERROR retry function is called', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry();
+                }
+                else if (ev.retryCount === 1) {
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should modify connection args when EVENT_SOCKET_ERROR retry function is called with args', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    ev.retry({
+                        host: 'localhost'
+                    });
+                }
+                else if (ev.retryCount === 1) {
+                    assert.strictEqual(ev.host, 'localhost');
+                    assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
             client.getBlocks({
                 height: 10,
                 count: 3,
