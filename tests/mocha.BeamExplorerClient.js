@@ -319,6 +319,32 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000);
+            httpResponseStatusCode = 404;
+            let startTime;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTime = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    const delayMs = Date.now() - startTime;
+                    assert.strictEqual(delayMs > 1950, true);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -366,6 +392,32 @@ describe('BeamExplorerClient', () => {
                 else if (ev.retryCount === 1) {
                     assert.strictEqual(ev.host, 'localhost');
                     assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should delay retry when EVENT_SOCKET_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            let startTimeMs;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTimeMs = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    let delayMs = Date.now() - startTimeMs;
+                    assert.strictEqual(delayMs > 1950, true);
                     done();
                 }
                 else {
@@ -477,6 +529,32 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000);
+            httpResponseStatusCode = 404;
+            let startTime;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTime = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    const delayMs = Date.now() - startTime;
+                    assert.strictEqual(delayMs > 1950, true);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -525,6 +603,32 @@ describe('BeamExplorerClient', () => {
                 else if (ev.retryCount === 1) {
                     assert.strictEqual(ev.host, 'localhost');
                     assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should delay retry when EVENT_SOCKET_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            let startTimeMs;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTimeMs = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    let delayMs = Date.now() - startTimeMs;
+                    assert.strictEqual(delayMs > 1950, true);
                     done();
                 }
                 else {
@@ -636,6 +740,32 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000);
+            httpResponseStatusCode = 404;
+            let startTime;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTime = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    const delayMs = Date.now() - startTime;
+                    assert.strictEqual(delayMs > 1950, true);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -684,6 +814,32 @@ describe('BeamExplorerClient', () => {
                 else if (ev.retryCount === 1) {
                     assert.strictEqual(ev.host, 'localhost');
                     assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should delay retry when EVENT_SOCKET_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            let startTimeMs;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTimeMs = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    let delayMs = Date.now() - startTimeMs;
+                    assert.strictEqual(delayMs > 1950, true);
                     done();
                 }
                 else {
@@ -777,6 +933,33 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000);
+            httpResponseStatusCode = 404;
+            let startTime;
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTime = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    const delayMs = Date.now() - startTime;
+                    assert.strictEqual(delayMs > 1950, true);
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
         it('should modify connection args when EVENT_API_ERROR retry function is called with args', done => {
             httpResponseStatusCode = 404;
             client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
@@ -851,6 +1034,33 @@ describe('BeamExplorerClient', () => {
                 else if (ev.retryCount === 1) {
                     assert.strictEqual(ev.host, 'localhost');
                     assert.strictEqual(ev.port, 2)
+                    done();
+                }
+                else {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should delay retry when EVENT_SOCKET_ERROR retry function is called with delay', function(done) {
+            this.timeout(7000)
+            client._port = 2;
+            let startTimeMs;
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                if (ev.retryCount === 0) {
+                    startTimeMs = Date.now();
+                    ev.retry({
+                        host: 'localhost'
+                    }, 2000);
+                }
+                else if (ev.retryCount === 1) {
+                    let delayMs = Date.now() - startTimeMs;
+                    assert.strictEqual(delayMs > 1950, true);
                     done();
                 }
                 else {

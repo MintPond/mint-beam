@@ -602,25 +602,38 @@ class BeamWalletClient extends EventEmitter {
         error.statusCode = res.statusCode
 
         let shouldRetry = false;
+        let retryDelayMs = 0;
         const ev = {
             ...connectArgs,
             get error() { return error },
             get statusCode() { return res.statusCode },
             get reqObj() { return reqObj },
             get res() { return res },
-            retry: (args) => {
+            /**
+             * Retry failed method.
+             * @param [args] {{host?:string,port?:number,timeout?:number,isSecure?:boolean}}
+             * @param [delayMs] {number}
+             */
+            retry: (args, delayMs) => {
+                precon.opt_obj(args, 'args');
+                precon.opt_positiveInteger(delayMs, 'delayMs');
+
                 connectArgs = {
                     ..._.$createConnectArgs(),
                     ...args
                 };
+
                 shouldRetry = true;
+                retryDelayMs = Math.max(retryDelayMs, delayMs || 0);
             }
         };
         _.emit(BeamWalletClient.EVENT_API_ERROR, ev);
 
         if (shouldRetry) {
             connectArgs.retryCount++;
-            _._post(reqObj, connectArgs, callback);
+            setTimeout(() => {
+                _._post(reqObj, connectArgs, callback);
+            }, retryDelayMs);
         }
         else {
             callback(error);
@@ -631,23 +644,36 @@ class BeamWalletClient extends EventEmitter {
     $handleSocketError(err, reqObj, connectArgs, callback) {
         const _ = this;
         let shouldRetry = false;
+        let retryDelayMs = 0;
         const ev = {
             ...connectArgs,
             get error() { return err },
             get reqObj() { return reqObj },
-            retry: (args) => {
+            /**
+             * Retry failed method.
+             * @param [args] {{host?:string,port?:number,timeout?:number,isSecure?:boolean}}
+             * @param [delayMs] {number}
+             */
+            retry: (args, delayMs) => {
+                precon.opt_obj(args, 'args');
+                precon.opt_positiveInteger(delayMs, 'delayMs');
+
                 connectArgs = {
                     ..._.$createConnectArgs(),
                     ...args
                 };
+
                 shouldRetry = true;
+                retryDelayMs = Math.max(retryDelayMs, delayMs || 0);
             }
         };
         _.emit(BeamWalletClient.EVENT_SOCKET_ERROR, ev);
 
         if (shouldRetry) {
             connectArgs.retryCount++;
-            _._post(reqObj, connectArgs, callback);
+            setTimeout(() => {
+                _._post(reqObj, connectArgs, callback);
+            }, retryDelayMs);
         }
         else {
             callback(err);

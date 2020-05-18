@@ -46,6 +46,7 @@ class BeamMiningClient extends EventEmitter {
         _._replyMap = new Map();
         _._currentJob = null;
         _._isConnected = false;
+        _._connectTimeout = null;
     }
 
 
@@ -173,6 +174,7 @@ class BeamMiningClient extends EventEmitter {
         const _ = this;
 
         _._isConnected = false;
+        clearTimeout(_._connectTimeout);
         if (!_._socket)
             return;
 
@@ -271,14 +273,37 @@ class BeamMiningClient extends EventEmitter {
         const _ = this;
         let shouldReconnect = false;
         let reconnectCallbackArr = [];
+        let retryDelayMs = 0;
         _.emit(BeamMiningClient.EVENT_SOCKET_DISCONNECT, {
             ..._._connectArgs,
-            reconnect(args, callback) {
+            /**
+             * Reconnect to the mining node.
+             * @param [callback] {function}
+             *//**
+             * Reconnect to the mining node.
+             * @param [delayMs] {number}
+             * @param [callback] {function}
+             *//**
+             * Reconnect to the mining node.
+             * @param [args] {{host?:string,port?:number,apiKey?:string}}
+             * @param [delayMs] {number}
+             * @param [callback] {function}
+             */
+            reconnect(args, delayMs, callback) {
 
                 if (mu.isFunction(args)) {
                     callback = args;
+                    delayMs = 0;
                     args = null;
                 }
+
+                if (mu.isFunction(delayMs)) {
+                    callback = delayMs;
+                    delayMs = 0;
+                }
+
+                if (mu.isNumber(args))
+                    delayMs = args;
 
                 if (mu.isFunction(callback))
                     reconnectCallbackArr.push(callback);
@@ -288,7 +313,9 @@ class BeamMiningClient extends EventEmitter {
                     ...args,
                     reconnectCount: _._connectArgs.reconnectCount
                 };
+
                 shouldReconnect = true;
+                retryDelayMs = Math.max(retryDelayMs, delayMs || 0);
             }
         });
 
@@ -297,9 +324,11 @@ class BeamMiningClient extends EventEmitter {
         if (shouldReconnect) {
             _._connectArgs.reconnectCount++;
             _._isConnected = true;
-            _._connect(_._connectArgs, err => {
-                reconnectCallbackArr.forEach(callback => { callback(err) });
-            });
+            _._connectTimeout = setTimeout(() => {
+                _._connect(_._connectArgs, err => {
+                    reconnectCallbackArr.forEach(callback => { callback(err) });
+                });
+            }, retryDelayMs);
         }
         else {
             for (const fnArr of _._replyMap.values()) {
@@ -316,6 +345,8 @@ class BeamMiningClient extends EventEmitter {
     _connect(connectArgs, callback) {
 
         const _ = this;
+
+        clearTimeout(_._connectTimeout);
 
         const netSocket = _.$createConnection(connectArgs, () => {
 

@@ -309,25 +309,38 @@ class BeamExplorerClient extends EventEmitter {
         error.statusCode = res.statusCode
 
         let shouldRetry = false;
+        let retryDelayMs = 0;
         const ev = {
             ...connectArgs,
             get error() { return error },
             get statusCode() { return res.statusCode },
             get path() { return path },
             get res() { return res },
-            retry: (args) => {
+            /**
+             * Retry failed method.
+             * @param [args] {{host?:string,port?:number,timeout?:number,isSecure?:boolean}}
+             * @param [delayMs] {number}
+             */
+            retry: (args, delayMs) => {
+                precon.opt_obj(args, 'args');
+                precon.opt_positiveInteger(delayMs, 'delayMs');
+
                 connectArgs = {
                     ..._.$createConnectArgs(),
                     ...args
                 };
+
                 shouldRetry = true;
+                retryDelayMs = Math.max(retryDelayMs, delayMs || 0);
             }
         };
         _.emit(BeamExplorerClient.EVENT_API_ERROR, ev);
 
         if (shouldRetry) {
             connectArgs.retryCount++;
-            _._get(path, connectArgs, callback);
+            setTimeout(() => {
+                _._get(path, connectArgs, callback);
+            }, retryDelayMs);
         }
         else {
             callback(error);
@@ -338,23 +351,36 @@ class BeamExplorerClient extends EventEmitter {
     $handleSocketError(err, path, connectArgs, callback) {
         const _ = this;
         let shouldRetry = false;
+        let retryDelayMs = 0;
         const ev = {
             ...connectArgs,
             get error() { return err },
             get path() { return path },
-            retry: (args) => {
+            /**
+             * Retry failed method.
+             * @param [args] {{host?:string,port?:number,timeout?:number,isSecure?:boolean}}
+             * @param [delayMs] {number}
+             */
+            retry: (args, delayMs) => {
+                precon.opt_obj(args, 'args');
+                precon.opt_positiveInteger(delayMs, 'delayMs');
+
                 connectArgs = {
                     ..._.$createConnectArgs(),
                     ...args
                 };
+
                 shouldRetry = true;
+                retryDelayMs = Math.max(retryDelayMs, delayMs || 0);
             }
         };
         _.emit(BeamExplorerClient.EVENT_SOCKET_ERROR, ev);
 
         if (shouldRetry) {
             connectArgs.retryCount++;
-            _._get(path, connectArgs, callback);
+            setTimeout(() => {
+                _._get(path, connectArgs, callback);
+            }, retryDelayMs);
         }
         else {
             callback(err);

@@ -281,6 +281,50 @@ describe('BeamStratumClient', () => {
             });
             client.connect();
         });
+
+        it('should delay reconnect when EVENT_SOCKET_DISCONNECT reconnect function is called with delay (1)', function (done) {
+            this.timeout(7000);
+            client._port = 2;
+            setupLogin();
+            let startTimeMs = 0;
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    startTimeMs = Date.now();
+                    ev.reconnect({
+                        host: 'localhost'
+                    }, 2000, () => {
+                        const delayMs = Date.now() - startTimeMs;
+                        assert.strictEqual(delayMs > 1950, true);
+                        done();
+                    });
+                }
+                else if (ev.reconnectCount !== 1) {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.connect();
+        });
+
+        it('should delay reconnect when EVENT_SOCKET_DISCONNECT reconnect function is called with delay (2)', function (done) {
+            this.timeout(7000);
+            client._port = 2;
+            setupLogin();
+            let startTimeMs = 0;
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
+                if (ev.reconnectCount === 0) {
+                    startTimeMs = Date.now();
+                    ev.reconnect(2000, () => {
+                        const delayMs = Date.now() - startTimeMs;
+                        assert.strictEqual(delayMs > 1950, true);
+                        done();
+                    });
+                }
+                else if (ev.reconnectCount !== 1) {
+                    throw new Error('Unexpected outcome');
+                }
+            });
+            client.connect();
+        });
     });
 
     describe('submitSolution function', () => {
