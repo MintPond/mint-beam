@@ -227,6 +227,19 @@ class BeamExplorerClient {
     }
 
 
+    $handleResponseError(res, callback) {
+        const error = new Error(res.statusMessage);
+        error.statusCode = res.statusCode
+        callback && callback(error);
+        callback = null;
+    }
+
+
+    $handleError(err, callback) {
+        callback(err);
+    }
+
+
     _get(path, callback) {
         const _ = this;
 
@@ -243,9 +256,7 @@ class BeamExplorerClient {
         const req = (_._isSecure ? https : http).request(options, (res) => {
 
             if (res.statusCode !== 200) {
-                const error = new Error(res.statusMessage);
-                error.statusCode = res.statusCode
-                callback && callback(error);
+                callback && _.$handleResponseError(res, callback);
                 callback = null;
                 return;
             }
@@ -260,7 +271,7 @@ class BeamExplorerClient {
         });
 
         req.on('error', err => {
-            callback && callback(err);
+            callback && _.$handleError(err, callback);
             callback = null;
         });
 
