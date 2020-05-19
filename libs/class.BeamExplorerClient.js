@@ -97,7 +97,7 @@ class BeamExplorerClient extends EventEmitter {
         const _ = this;
         const callback = args.callback;
 
-        _._get(`status`, _.$createConnectArgs(), callback);
+        _._get(`status`, _.$createConnectArgs('getStatus', args), callback);
     }
 
 
@@ -139,7 +139,7 @@ class BeamExplorerClient extends EventEmitter {
         const id = args.id;
         const callback = args.callback;
 
-        _._get(`block?hash=${id}`, _.$createConnectArgs(), callback);
+        _._get(`block?hash=${id}`, _.$createConnectArgs('getBlock', args), callback);
     }
 
 
@@ -181,7 +181,7 @@ class BeamExplorerClient extends EventEmitter {
         const height = args.height;
         const callback = args.callback;
 
-        _._get(`block?height=${height}`, _.$createConnectArgs(), callback);
+        _._get(`block?height=${height}`, _.$createConnectArgs('getBlockAt', args), callback);
     }
 
 
@@ -223,7 +223,7 @@ class BeamExplorerClient extends EventEmitter {
         const id = args.id;
         const callback = args.callback;
 
-        _._get(`block?kernel=${id}`, _.$createConnectArgs(), callback);
+        _._get(`block?kernel=${id}`, _.$createConnectArgs('getBlockByKernel', args), callback);
     }
 
 
@@ -268,18 +268,20 @@ class BeamExplorerClient extends EventEmitter {
         const count = args.count;
         const callback = args.callback;
 
-        _._get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs(), callback);
+        _._get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs('getBlocks', args), callback);
     }
 
 
-    $createConnectArgs() {
+    $createConnectArgs(fnName, fnArgs) {
         const _ = this;
         return {
             host: _._host,
             port: _._port,
             timeout: _._timeout,
             isSecure: _._isSecure,
-            retryCount: 0
+            retryCount: 0,
+            fnName: fnName,
+            fnArgs: fnArgs
         };
     }
 
@@ -326,7 +328,7 @@ class BeamExplorerClient extends EventEmitter {
                 precon.opt_positiveInteger(delayMs, 'delayMs');
 
                 connectArgs = {
-                    ..._.$createConnectArgs(),
+                    ..._.$createConnectArgs(connectArgs.fnName, connectArgs.fnArgs),
                     ...args
                 };
 
@@ -366,7 +368,7 @@ class BeamExplorerClient extends EventEmitter {
                 precon.opt_positiveInteger(delayMs, 'delayMs');
 
                 connectArgs = {
-                    ..._.$createConnectArgs(),
+                    ..._.$createConnectArgs(connectArgs.fnName, connectArgs.fnArgs),
                     ...args
                 };
 

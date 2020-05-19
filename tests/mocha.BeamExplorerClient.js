@@ -163,6 +163,19 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                callback: () => {}
+            };
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getStatus');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getStatus(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -218,6 +231,19 @@ describe('BeamExplorerClient', () => {
             client.getStatus({
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                callback: () => {}
+            };
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getStatus');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getStatus(args);
         });
     });
 
@@ -319,6 +345,20 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                id: 'abc',
+                callback: () => {}
+            };
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlock');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlock(args);
+        });
+
         it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
             this.timeout(7000);
             httpResponseStatusCode = 404;
@@ -429,6 +469,20 @@ describe('BeamExplorerClient', () => {
                 callback: () => {}
             });
         });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                id: 'abc',
+                callback: () => {}
+            };
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlock');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlock(args);
+        });
     });
 
     describe('getBlockAt function', () => {
@@ -527,6 +581,20 @@ describe('BeamExplorerClient', () => {
                 height: 10,
                 callback: () => { }
             });
+        });
+
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                height: 10,
+                callback: () => { }
+            };
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlockAt');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlockAt(args);
         });
 
         it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
@@ -639,6 +707,20 @@ describe('BeamExplorerClient', () => {
                 height: 10,
                 callback: () => { }
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                height: 10,
+                callback: () => { }
+            };
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlockAt');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlockAt(args);
         });
     });
 
@@ -740,6 +822,20 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                id: 'abc',
+                callback: () => { }
+            };
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlockByKernel');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlockByKernel(args);
+        });
+
         it('should delay retry when EVENT_API_ERROR retry function is called with delay', function(done) {
             this.timeout(7000);
             httpResponseStatusCode = 404;
@@ -850,6 +946,20 @@ describe('BeamExplorerClient', () => {
                 id: 'abc',
                 callback: () => { }
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                id: 'abc',
+                callback: () => { }
+            };
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlockByKernel');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlockByKernel(args);
         });
     });
 
@@ -984,6 +1094,21 @@ describe('BeamExplorerClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                height: 10,
+                count: 3,
+                callback: () => { }
+            };
+            client.on(BeamExplorerClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlocks');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlocks(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -1072,6 +1197,21 @@ describe('BeamExplorerClient', () => {
                 count: 3,
                 callback: () => { }
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                height: 10,
+                count: 3,
+                callback: () => { }
+            };
+            client.on(BeamExplorerClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getBlocks');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getBlocks(args);
         });
     });
 });

@@ -107,7 +107,7 @@ class BeamWalletClient extends EventEmitter {
                 expiration: expire,
                 comment: comment
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('createAddress', args), callback);
     }
 
 
@@ -134,7 +134,7 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 address: address
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('validateAddress', args), callback);
     }
 
 
@@ -169,7 +169,7 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 own: own
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('addrList', args), callback);
     }
 
 
@@ -195,7 +195,7 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 address: address
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('deleteAddress', args), callback);
     }
 
 
@@ -229,7 +229,7 @@ class BeamWalletClient extends EventEmitter {
                 comment: comment,
                 expiration: expire
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('editAddress', args), callback);
     }
 
 
@@ -275,7 +275,7 @@ class BeamWalletClient extends EventEmitter {
                 comment: comment,
                 txId: mu.isString(txId) ? txId : undefined
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('txSend', args), callback);
     }
 
 
@@ -286,6 +286,7 @@ class BeamWalletClient extends EventEmitter {
      * @param args.coins {number[]} Output values in groth/satoshi units.
      * @param [args.fee] {number} In groth/satoshi units.
      * @param [args.txId] {string}
+     * @param args.callback {function(err:*, { txId:string })}
      */
     txSplit(args) {
         precon.arrayOf(args.coins, 'number', 'coins');
@@ -308,7 +309,7 @@ class BeamWalletClient extends EventEmitter {
                 fee: mu.isNumber(fee) ? fee : undefined,
                 txId: mu.isString(txId) ? txId : undefined
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('txSplit', args), callback);
     }
 
 
@@ -334,7 +335,7 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 txId: txId
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('txCancel', args), callback);
     }
 
 
@@ -363,7 +364,7 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 txId: txId
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('txStatus', args), callback);
     }
 
 
@@ -413,7 +414,7 @@ class BeamWalletClient extends EventEmitter {
                 skip: skip || 0,
                 count: mu.isNumber(count) ? count : undefined
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('txList', args), callback);
     }
 
 
@@ -442,7 +443,7 @@ class BeamWalletClient extends EventEmitter {
             jsonrpc: '2.0',
             id: 1,
             method: 'wallet_status'
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('walletStatus', args), callback);
     }
 
 
@@ -482,7 +483,7 @@ class BeamWalletClient extends EventEmitter {
                 count: mu.isNumber(count) ? count : undefined,
                 skip: skip || 0
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('getUTXO', args), callback);
     }
 
 
@@ -502,7 +503,7 @@ class BeamWalletClient extends EventEmitter {
             jsonrpc: '2.0',
             id: 1,
             method: 'generate_tx_id'
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('generateTxId', args), callback);
     }
 
 
@@ -528,7 +529,7 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 txId: txId
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('exportPaymentProof', args), callback);
     }
 
 
@@ -561,18 +562,20 @@ class BeamWalletClient extends EventEmitter {
             params: {
                 payment_proof: paymentProof
             }
-        }, _.$createConnectArgs(), callback);
+        }, _.$createConnectArgs('verifyPaymentProof', args), callback);
     }
 
 
-    $createConnectArgs() {
+    $createConnectArgs(fnName, fnArgs) {
         const _ = this;
         return {
             host: _._host,
             port: _._port,
             timeout: _._timeout,
             isSecure: _._isSecure,
-            retryCount: 0
+            retryCount: 0,
+            fnName: fnName,
+            fnArgs: fnArgs
         };
     }
 
@@ -619,7 +622,7 @@ class BeamWalletClient extends EventEmitter {
                 precon.opt_positiveInteger(delayMs, 'delayMs');
 
                 connectArgs = {
-                    ..._.$createConnectArgs(),
+                    ..._.$createConnectArgs(connectArgs.fnName, connectArgs.fnArgs),
                     ...args
                 };
 
@@ -659,7 +662,7 @@ class BeamWalletClient extends EventEmitter {
                 precon.opt_positiveInteger(delayMs, 'delayMs');
 
                 connectArgs = {
-                    ..._.$createConnectArgs(),
+                    ..._.$createConnectArgs(connectArgs.fnName, connectArgs.fnArgs),
                     ...args
                 };
 

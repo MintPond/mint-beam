@@ -208,6 +208,21 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'createAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.createAddress(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -295,6 +310,21 @@ describe('BeamWalletClient', () => {
                 comment: 'Test',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'createAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.createAddress(args);
         });
     });
 
@@ -424,6 +454,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                address: 'abc',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'validateAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.validateAddress(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -507,6 +551,20 @@ describe('BeamWalletClient', () => {
                 address: 'abc',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                address: 'abc',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'validateAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.validateAddress(args);
         });
     });
 
@@ -636,6 +694,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                own: true,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'addrList');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.addrList(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -719,6 +791,20 @@ describe('BeamWalletClient', () => {
                 own: true,
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                own: true,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'addrList');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.addrList(args);
         });
     });
 
@@ -848,6 +934,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                address: 'abc',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'deleteAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.deleteAddress(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -931,6 +1031,20 @@ describe('BeamWalletClient', () => {
                 address: 'abc',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                address: 'abc',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'deleteAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.deleteAddress(args);
         });
     });
 
@@ -1076,6 +1190,22 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'editAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.editAddress(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -1167,6 +1297,22 @@ describe('BeamWalletClient', () => {
                 expire: BeamAddressExpire.NEVER,
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'editAddress');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.editAddress(args);
         });
     });
 
@@ -1336,6 +1482,25 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txSend');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txSend(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -1439,6 +1604,25 @@ describe('BeamWalletClient', () => {
                 txId: 'tx',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txSend');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txSend(args);
         });
     });
 
@@ -1588,6 +1772,22 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txSplit');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txSplit(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -1679,6 +1879,22 @@ describe('BeamWalletClient', () => {
                 txId: 'tx',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txSplit');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txSplit(args);
         });
     });
 
@@ -1808,6 +2024,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txCancel');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txCancel(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -1891,6 +2121,20 @@ describe('BeamWalletClient', () => {
                 txId: 'tx',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txCancel');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txCancel(args);
         });
     });
 
@@ -2020,6 +2264,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txStatus');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txStatus(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -2103,6 +2361,20 @@ describe('BeamWalletClient', () => {
                 txId: 'tx',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txStatus');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txStatus(args);
         });
     });
 
@@ -2255,6 +2527,21 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txList');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txList(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -2342,6 +2629,21 @@ describe('BeamWalletClient', () => {
                 count: 200,
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                skip: 0,
+                count: 200,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'txList');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.txList(args);
         });
     });
 
@@ -2462,6 +2764,19 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'walletStatus');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.walletStatus(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -2541,6 +2856,19 @@ describe('BeamWalletClient', () => {
             client.walletStatus({
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'walletStatus');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.walletStatus(args);
         });
     });
 
@@ -2678,6 +3006,21 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getUTXO');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getUTXO(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -2765,6 +3108,21 @@ describe('BeamWalletClient', () => {
                 skip: 0,
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                count: 100,
+                skip: 0,
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'getUTXO');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.getUTXO(args);
         });
     });
 
@@ -2885,6 +3243,19 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'generateTxId');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.generateTxId(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -2964,6 +3335,19 @@ describe('BeamWalletClient', () => {
             client.generateTxId({
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'generateTxId');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.generateTxId(args);
         });
     });
 
@@ -3093,6 +3477,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'exportPaymentProof');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.exportPaymentProof(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -3176,6 +3574,20 @@ describe('BeamWalletClient', () => {
                 txId: 'tx',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                txId: 'tx',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'exportPaymentProof');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.exportPaymentProof(args);
         });
     });
 
@@ -3305,6 +3717,20 @@ describe('BeamWalletClient', () => {
             });
         });
 
+        it('should pass function name and args to EVENT_API_ERROR', done => {
+            httpResponseStatusCode = 404;
+            const args = {
+                paymentProof: 'proof',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_API_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'verifyPaymentProof');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.verifyPaymentProof(args);
+        });
+
         it('should emit EVENT_SOCKET_ERROR on socket error', function(done) {
             this.timeout(7000);
             client._port = 2;
@@ -3388,6 +3814,20 @@ describe('BeamWalletClient', () => {
                 paymentProof: 'proof',
                 callback: () => {}
             });
+        });
+
+        it('should pass function name and args to EVENT_SOCKET_ERROR', done => {
+            client._port = 2;
+            const args = {
+                paymentProof: 'proof',
+                callback: () => {}
+            };
+            client.on(BeamWalletClient.EVENT_SOCKET_ERROR, ev => {
+                assert.strictEqual(ev.fnName, 'verifyPaymentProof');
+                assert.strictEqual(ev.fnArgs, args);
+                done();
+            });
+            client.verifyPaymentProof(args);
         });
     });
 });
