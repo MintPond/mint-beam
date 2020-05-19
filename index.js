@@ -12,5 +12,6 @@ module.exports = {
     BeamTxType: require('./libs/const.BeamTxType'),
 
     /* Utils */
-    beamDiff: require('./libs/service.beamDiff')
+    beamDiff: require('./libs/service.beamDiff'),
+    beamReward: require('./libs/service.beamReward')
 };
