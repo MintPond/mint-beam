@@ -5,6 +5,7 @@ const
     http = require('http'),
     https = require('https'),
     precon = require('@mintpond/mint-precon'),
+    JsonBuffer = require('@mintpond/mint-socket').JsonBuffer,
     mu = require('@mintpond/mint-utils'),
     pu = require('@mintpond/mint-utils').prototypes,
     BeamAddressExpire = require('./const.BeamAddressExpire'),
@@ -345,8 +346,17 @@ class BeamWalletClient extends EventEmitter {
      * @param args
      * @param args.txId {string}
      * @param args.callback {function(err:*, {
+     *     comment: string,
+     *     create_time: number,
+     *     fee: number,
+     *     income: boolean,
+     *     kernel: string,
+     *     receiver: string,
+     *     sender: string,
+     *     status: number,
+     *     status_string: string,
      *     txId: string,
-     *     asset_id: number,
+     *     value: number
      * })}
      */
     txStatus(args) {
@@ -699,10 +709,24 @@ class BeamWalletClient extends EventEmitter {
                 return;
             }
 
-            res.setEncoding('utf8');
+            const buffer = new JsonBuffer();
+            const messagesArr = [];
+            const timeout = setTimeout(() => {
+                callback && callback(new Error(`Timed out.`));
+                callback = null;
+            }, 20000);
+
             res.on('data', chunk => {
-                const json = chunk.toString();
-                const parsed = JSON.parse(json);
+
+                buffer.append(chunk, messagesArr);
+
+                if (!messagesArr.length)
+                    return;
+
+                clearTimeout(timeout);
+
+                const parsed = messagesArr[0];
+
                 callback && callback(parsed.error ? {
                     ...parsed.error,
                     toString() { return `ERROR: ${parsed.error.code}: ${parsed.error.message} ${parsed.error.data}`},
@@ -714,6 +738,7 @@ class BeamWalletClient extends EventEmitter {
                         };
                     }
                 } : null, parsed.result);
+
                 callback = null;
             });
         });

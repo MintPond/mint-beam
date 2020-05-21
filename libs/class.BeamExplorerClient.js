@@ -5,6 +5,7 @@ const
     http = require('http'),
     https = require('https'),
     precon = require('@mintpond/mint-precon'),
+    JsonBuffer = require('@mintpond/mint-socket').JsonBuffer,
     pu = require('@mintpond/mint-utils').prototypes;
 
 
@@ -403,12 +404,21 @@ class BeamExplorerClient extends EventEmitter {
                 return;
             }
 
-            res.setEncoding('utf8');
-            res.on('data', chunk => {
-                const json = chunk.toString();
-                const parsed = JSON.parse(json);
-                callback && callback(null, parsed);
+            const buffer = new JsonBuffer();
+            const messagesArr = [];
+            const timeout = setTimeout(() => {
+                callback && callback(new Error(`Timed out: ${path}`));
                 callback = null;
+            }, 20000);
+
+            res.on('data', chunk => {
+                buffer.append(chunk, messagesArr);
+
+                if (messagesArr.length > 0) {
+                    clearTimeout(timeout);
+                    callback && callback(null, messagesArr[0]);
+                    callback = null;
+                }
             });
         });
 

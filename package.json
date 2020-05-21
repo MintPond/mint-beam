@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {
     "@mintpond/mint-precon": "^1.0.0",
-    "@mintpond/mint-socket": "^1.0.0",
+    "@mintpond/mint-socket": "^1.1.0",
     "@mintpond/mint-utils": "^2.0.0"
   },
   "devDependencies": {
