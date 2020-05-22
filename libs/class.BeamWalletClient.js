@@ -49,12 +49,17 @@ class BeamWalletClient extends EventEmitter {
      */
     static get EVENT_SOCKET_ERROR() { return 'socketError' }
 
-
     /**
      * The name of the event emitted when the API server responds with a status code other than 200.
      * @returns {string}
      */
     static get EVENT_API_ERROR() { return 'apiError' }
+
+    /**
+     * The name of the event emitted when an api request is made.
+     * @returns {string}
+s     */
+    static get EVENT_API_REQUEST() { return 'apiRequest'}
 
 
     /**
@@ -100,7 +105,7 @@ class BeamWalletClient extends EventEmitter {
         const comment = args.comment;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'create_address',
@@ -128,7 +133,7 @@ class BeamWalletClient extends EventEmitter {
         const address = args.address;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'validate_address',
@@ -163,7 +168,7 @@ class BeamWalletClient extends EventEmitter {
         const own = args.own;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'addr_list',
@@ -189,7 +194,7 @@ class BeamWalletClient extends EventEmitter {
         const address = args.address;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'delete_address',
@@ -221,7 +226,7 @@ class BeamWalletClient extends EventEmitter {
         const expire = args.expire;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'edit_address',
@@ -264,7 +269,7 @@ class BeamWalletClient extends EventEmitter {
         const txId = args.txId;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'tx_send',
@@ -301,7 +306,7 @@ class BeamWalletClient extends EventEmitter {
         const txId = args.txId;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'tx_split',
@@ -329,7 +334,7 @@ class BeamWalletClient extends EventEmitter {
         const txId = args.txId;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'tx_cancel',
@@ -367,7 +372,7 @@ class BeamWalletClient extends EventEmitter {
         const txId = args.txId;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'tx_status',
@@ -415,7 +420,7 @@ class BeamWalletClient extends EventEmitter {
         const count = args.count;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'tx_list',
@@ -449,7 +454,7 @@ class BeamWalletClient extends EventEmitter {
         const _ = this;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'wallet_status'
@@ -485,7 +490,7 @@ class BeamWalletClient extends EventEmitter {
         const skip = args.skip;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'get_utxo',
@@ -509,7 +514,7 @@ class BeamWalletClient extends EventEmitter {
         const _ = this;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'generate_tx_id'
@@ -532,7 +537,7 @@ class BeamWalletClient extends EventEmitter {
         const txId = args.txId;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'export_payment_proof',
@@ -565,7 +570,7 @@ class BeamWalletClient extends EventEmitter {
         const paymentProof = args.paymentProof;
         const callback = args.callback;
 
-        _._post({
+        _.$post({
             jsonrpc: '2.0',
             id: 1,
             method: 'verify_payment_proof',
@@ -645,7 +650,7 @@ class BeamWalletClient extends EventEmitter {
         if (shouldRetry) {
             connectArgs.retryCount++;
             setTimeout(() => {
-                _._post(reqObj, connectArgs, callback);
+                _.$post(reqObj, connectArgs, callback);
             }, retryDelayMs);
         }
         else {
@@ -685,7 +690,7 @@ class BeamWalletClient extends EventEmitter {
         if (shouldRetry) {
             connectArgs.retryCount++;
             setTimeout(() => {
-                _._post(reqObj, connectArgs, callback);
+                _.$post(reqObj, connectArgs, callback);
             }, retryDelayMs);
         }
         else {
@@ -694,10 +699,43 @@ class BeamWalletClient extends EventEmitter {
     }
 
 
-    _post(reqObj, connectArgs, callback) {
+    $post(reqObj, connectArgs, callback) {
 
         const _ = this;
         const isSecure = connectArgs.isSecure;
+
+        let localError = null;
+        let localResult = null;
+        let shouldCancel = false;
+
+        _.emit(BeamWalletClient.EVENT_API_REQUEST, {
+            get reqObj() { return reqObj },
+            get connectArgs() { return connectArgs },
+            setError(error) {
+                localError = error;
+            },
+            setResult(result) {
+                localResult = result;
+            },
+            cancel() {
+                shouldCancel = true;
+            }
+        });
+
+        if (shouldCancel) {
+            callback(new Error(`Wallet API request cancelled: ${reqObj.method}`));
+            return;
+        }
+
+        if (localError) {
+            _.$handleSocketError(localError, reqObj, connectArgs, callback);
+            return;
+        }
+
+        if (localResult) {
+            callback(null, localResult);
+            return;
+        }
 
         const data = JSON.stringify(reqObj);
         const options = _.$createHttpOptions(connectArgs, data);
@@ -712,7 +750,7 @@ class BeamWalletClient extends EventEmitter {
             const buffer = new JsonBuffer();
             const messagesArr = [];
             const timeout = setTimeout(() => {
-                callback && callback(new Error(`Timed out.`));
+                callback && callback(new Error(`Wallet API request timed out: ${reqObj.method}`));
                 callback = null;
             }, 20000);
 

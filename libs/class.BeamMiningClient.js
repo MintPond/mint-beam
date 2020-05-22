@@ -163,7 +163,7 @@ class BeamMiningClient extends EventEmitter {
         _._isConnected = true;
         _._connectArgs = _.$createConnectArgs();
 
-        _._connect(_._connectArgs, callback);
+        _.$connect(_._connectArgs, callback);
     }
 
 
@@ -213,7 +213,7 @@ class BeamMiningClient extends EventEmitter {
             return;
         }
 
-        _._send({
+        _.$send({
             id: beamJobIdHex,
             method: 'solution',
             nonce: nonceHex,
@@ -325,7 +325,7 @@ class BeamMiningClient extends EventEmitter {
             _._connectArgs.reconnectCount++;
             _._isConnected = true;
             _._connectTimeout = setTimeout(() => {
-                _._connect(_._connectArgs, err => {
+                _.$connect(_._connectArgs, err => {
                     reconnectCallbackArr.forEach(callback => { callback(err) });
                 });
             }, retryDelayMs);
@@ -342,7 +342,7 @@ class BeamMiningClient extends EventEmitter {
     }
 
 
-    _connect(connectArgs, callback) {
+    $connect(connectArgs, callback) {
 
         const _ = this;
 
@@ -352,7 +352,7 @@ class BeamMiningClient extends EventEmitter {
 
             netSocket.off('error', onConnectError);
 
-            _._login(connectArgs.apiKey, (err) => {
+            _.$login(connectArgs.apiKey, (err) => {
 
                 if (!err)
                     connectArgs.reconnectCount = 0;
@@ -376,10 +376,10 @@ class BeamMiningClient extends EventEmitter {
     }
 
 
-    _login(apiKey, callback) {
+    $login(apiKey, callback) {
 
         const _ = this;
-        _._send({
+        _.$send({
             id: 'login',
             method: 'login',
             api_key: apiKey,
@@ -395,7 +395,7 @@ class BeamMiningClient extends EventEmitter {
     }
 
 
-    _send(data, callback) {
+    $send(data, callback) {
         precon.funct(callback);
         const _ = this;
         _._awaitResult(data.id, callback);

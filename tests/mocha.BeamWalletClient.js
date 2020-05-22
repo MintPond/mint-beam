@@ -326,6 +326,68 @@ describe('BeamWalletClient', () => {
             });
             client.createAddress(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.createAddress({
+                expire: BeamAddressExpire.HOURS_24,
+                comment: 'Test',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('validateAddress function', () => {
@@ -565,6 +627,64 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.validateAddress(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.validateAddress({
+                address: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -806,6 +926,64 @@ describe('BeamWalletClient', () => {
             });
             client.addrList(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.addrList({
+                own: true,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.addrList({
+                own: true,
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.addrList({
+                own: true,
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.addrList({
+                own: true,
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('deleteAddress function', () => {
@@ -1045,6 +1223,64 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.deleteAddress(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.deleteAddress({
+                address: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -1313,6 +1549,72 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.editAddress(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.editAddress({
+                address: 'abc',
+                comment: 'Test',
+                expire: BeamAddressExpire.NEVER,
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -1624,6 +1926,84 @@ describe('BeamWalletClient', () => {
             });
             client.txSend(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.txSend({
+                value: 1000,
+                fee: 100,
+                from: 'abcFrom',
+                address: 'abc',
+                comment: 'Test',
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('txSplit function', () => {
@@ -1896,6 +2276,72 @@ describe('BeamWalletClient', () => {
             });
             client.txSplit(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.txSplit({
+                coins: [100, 1000, 10000],
+                fee: 100,
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('txCancel function', () => {
@@ -2136,6 +2582,64 @@ describe('BeamWalletClient', () => {
             });
             client.txCancel(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.txCancel({
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('txStatus function', () => {
@@ -2375,6 +2879,64 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.txStatus(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.txStatus({
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -2645,6 +3207,68 @@ describe('BeamWalletClient', () => {
             });
             client.txList(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.txList({
+                skip: 0,
+                count: 200,
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('walletStatus function', () => {
@@ -2869,6 +3493,60 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.walletStatus(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.walletStatus({
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.walletStatus({
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.walletStatus({
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.walletStatus({
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -3124,6 +3802,68 @@ describe('BeamWalletClient', () => {
             });
             client.getUTXO(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.getUTXO({
+                count: 100,
+                skip: 0,
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('generateTxId function', () => {
@@ -3348,6 +4088,60 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.generateTxId(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.generateTxId({
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.generateTxId({
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.generateTxId({
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.generateTxId({
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -3589,6 +4383,64 @@ describe('BeamWalletClient', () => {
             });
             client.exportPaymentProof(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.exportPaymentProof({
+                txId: 'tx',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('verifyPaymentProof function', () => {
@@ -3828,6 +4680,64 @@ describe('BeamWalletClient', () => {
                 done();
             });
             client.verifyPaymentProof(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamWalletClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamWalletClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.verifyPaymentProof({
+                paymentProof: 'proof',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 });

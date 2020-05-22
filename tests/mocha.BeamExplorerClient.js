@@ -245,6 +245,58 @@ describe('BeamExplorerClient', () => {
             });
             client.getStatus(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+                done();
+            });
+            client.getStatus({
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.getStatus({
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.getStatus({
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('getBlock function', () => {
@@ -482,6 +534,64 @@ describe('BeamExplorerClient', () => {
                 done();
             });
             client.getBlock(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: () => {}
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.getBlock({
+                id: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -722,6 +832,64 @@ describe('BeamExplorerClient', () => {
             });
             client.getBlockAt(args);
         });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.getBlockAt({
+                height: 10,
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
+        });
     });
 
     describe('getBlockByKernel function', () => {
@@ -960,6 +1128,64 @@ describe('BeamExplorerClient', () => {
                 done();
             });
             client.getBlockByKernel(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.getBlockByKernel({
+                id: 'abc',
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 
@@ -1212,6 +1438,68 @@ describe('BeamExplorerClient', () => {
                 done();
             });
             client.getBlocks(args);
+        });
+
+        it('should emit EVENT_API_REQUEST', done => {
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, () => {
+                done();
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: () => { }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow cancel', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.cancel();
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: (err) => {
+                    assert.strictEqual(!!err, true);
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting result', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setResult('this is the result');
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: (err, result) => {
+                    assert.strictEqual(result, 'this is the result');
+                    done();
+                }
+            });
+        });
+
+        it('should emit EVENT_API_REQUEST and allow setting error', done => {
+            apiReceiverFn = () => {
+                throw new Error('Should not send any data to API');
+            };
+            client.on(BeamExplorerClient.EVENT_API_REQUEST, ev => {
+                ev.setError('this is the error');
+            });
+            client.getBlocks({
+                height: 10,
+                count: 3,
+                callback: (err) => {
+                    assert.strictEqual(err, 'this is the error');
+                    done();
+                }
+            });
         });
     });
 });

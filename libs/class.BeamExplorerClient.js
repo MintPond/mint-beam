@@ -46,12 +46,17 @@ class BeamExplorerClient extends EventEmitter {
      */
     static get EVENT_SOCKET_ERROR() { return 'socketError' }
 
-
     /**
      * The name of the event emitted when the API server responds with a status code other than 200.
      * @returns {string}
      */
     static get EVENT_API_ERROR() { return 'apiError' }
+
+    /**
+     * The name of the event emitted when an api request is made.
+     * @returns {string}
+     */
+    static get EVENT_API_REQUEST() { return 'apiRequest'}
 
 
     /**
@@ -98,7 +103,7 @@ class BeamExplorerClient extends EventEmitter {
         const _ = this;
         const callback = args.callback;
 
-        _._get(`status`, _.$createConnectArgs('getStatus', args), callback);
+        _.$get(`status`, _.$createConnectArgs('getStatus', args), callback);
     }
 
 
@@ -140,7 +145,7 @@ class BeamExplorerClient extends EventEmitter {
         const id = args.id;
         const callback = args.callback;
 
-        _._get(`block?hash=${id}`, _.$createConnectArgs('getBlock', args), callback);
+        _.$get(`block?hash=${id}`, _.$createConnectArgs('getBlock', args), callback);
     }
 
 
@@ -148,7 +153,7 @@ class BeamExplorerClient extends EventEmitter {
      * Get block info by block height.
      *
      * @param args
-     * @param args.id {string}
+     * @param args.height {number}
      * @param args.callback {function(err:*, { found: boolean, height: number }|{
      *     chainwork: string,
      *     difficulty: number,
@@ -182,7 +187,7 @@ class BeamExplorerClient extends EventEmitter {
         const height = args.height;
         const callback = args.callback;
 
-        _._get(`block?height=${height}`, _.$createConnectArgs('getBlockAt', args), callback);
+        _.$get(`block?height=${height}`, _.$createConnectArgs('getBlockAt', args), callback);
     }
 
 
@@ -224,7 +229,7 @@ class BeamExplorerClient extends EventEmitter {
         const id = args.id;
         const callback = args.callback;
 
-        _._get(`block?kernel=${id}`, _.$createConnectArgs('getBlockByKernel', args), callback);
+        _.$get(`block?kernel=${id}`, _.$createConnectArgs('getBlockByKernel', args), callback);
     }
 
 
@@ -269,7 +274,7 @@ class BeamExplorerClient extends EventEmitter {
         const count = args.count;
         const callback = args.callback;
 
-        _._get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs('getBlocks', args), callback);
+        _.$get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs('getBlocks', args), callback);
     }
 
 
@@ -342,7 +347,7 @@ class BeamExplorerClient extends EventEmitter {
         if (shouldRetry) {
             connectArgs.retryCount++;
             setTimeout(() => {
-                _._get(path, connectArgs, callback);
+                _.$get(path, connectArgs, callback);
             }, retryDelayMs);
         }
         else {
@@ -382,7 +387,7 @@ class BeamExplorerClient extends EventEmitter {
         if (shouldRetry) {
             connectArgs.retryCount++;
             setTimeout(() => {
-                _._get(path, connectArgs, callback);
+                _.$get(path, connectArgs, callback);
             }, retryDelayMs);
         }
         else {
@@ -391,10 +396,47 @@ class BeamExplorerClient extends EventEmitter {
     }
 
 
-    _get(path, connectArgs, callback) {
+    $get(path, connectArgs, callback) {
         const _ = this;
         const isSecure = connectArgs.isSecure;
         const options = _.$createHttpOptions(connectArgs, path);
+
+        let localError = null;
+        let localResult = null;
+        let shouldCancel = false;
+
+        _.emit(BeamExplorerClient.EVENT_API_REQUEST, {
+            get path() { return path },
+            set path(p) {
+                precon.string(p, 'path');
+                path = p;
+            },
+            get connectArgs() { return connectArgs },
+            setError(error) {
+                localError = error;
+            },
+            setResult(result) {
+                localResult = result;
+            },
+            cancel() {
+                shouldCancel = true;
+            }
+        });
+
+        if (shouldCancel) {
+            callback(new Error(`Explorer API request cancelled: ${path}`));
+            return;
+        }
+
+        if (localError) {
+            _.$handleSocketError(localError, path, connectArgs, callback);
+            return;
+        }
+
+        if (localResult) {
+            callback(null, localResult);
+            return;
+        }
 
         const req = (isSecure ? https : http).request(options, (res) => {
 
@@ -407,7 +449,7 @@ class BeamExplorerClient extends EventEmitter {
             const buffer = new JsonBuffer();
             const messagesArr = [];
             const timeout = setTimeout(() => {
-                callback && callback(new Error(`Timed out: ${path}`));
+                callback && callback(new Error(`Explorer API request timed out: ${path}`));
                 callback = null;
             }, 20000);
 
