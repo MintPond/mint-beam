@@ -2,6 +2,7 @@
 
 const
     precon = require('@mintpond/mint-precon'),
+    pu = require('@mintpond/mint-utils').prototypes,
     BeamExplorerClient = require('./../libs/class.BeamExplorerClient');
 
 
@@ -243,6 +244,12 @@ class MockBeamExplorerClient extends BeamExplorerClient {
                 ev.setResult(_[resultName]);
             }
         });
+    }
+
+
+    static get CLASS_ID() { return '8eaaf0bc6ec92b8236b108fd2a58e1ed4b75d7f6c385f7bef57bc9126c38d208'; }
+    static [Symbol.hasInstance](obj) {
+        return pu.isInstanceOfById(obj, MockBeamExplorerClient.CLASS_ID);
     }
 }
 

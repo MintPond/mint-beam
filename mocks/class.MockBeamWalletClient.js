@@ -2,6 +2,7 @@
 
 const
     precon = require('@mintpond/mint-precon'),
+    pu = require('@mintpond/mint-utils').prototypes,
     BeamWalletClient = require('./../libs/class.BeamWalletClient');
 
 
@@ -227,6 +228,12 @@ class MockBeamWalletClient extends BeamWalletClient {
                 ev.setResult(_[resultName]);
             }
         });
+    }
+
+
+    static get CLASS_ID() { return '008e6405fce958264b5ff786db48e992b816497ae5a00a12dbe2fa16b631cacc'; }
+    static [Symbol.hasInstance](obj) {
+        return pu.isInstanceOfById(obj, MockBeamWalletClient.CLASS_ID);
     }
 }
 

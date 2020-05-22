@@ -2,6 +2,7 @@
 
 const
     precon = require('@mintpond/mint-precon'),
+    pu = require('@mintpond/mint-utils').prototypes,
     BeamMiningClient = require('./../libs/class.BeamMiningClient');
 
 
@@ -131,6 +132,12 @@ class MockBeamMiningClient extends BeamMiningClient {
         else {
             throw new Error(`Unimplemented method: ${data.method}`);
         }
+    }
+
+
+    static get CLASS_ID() { return '78288d7380d5342660e8ce9dbde9628e8bc74aa91f26847d9dea185ccf0f9642'; }
+    static [Symbol.hasInstance](obj) {
+        return pu.isInstanceOfById(obj, MockBeamMiningClient.CLASS_ID);
     }
 }
 

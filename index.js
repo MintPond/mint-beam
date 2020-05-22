@@ -13,5 +13,10 @@ module.exports = {
 
     /* Utils */
     beamDiff: require('./libs/service.beamDiff'),
-    beamReward: require('./libs/service.beamReward')
+    beamReward: require('./libs/service.beamReward'),
+
+    /* Mockups */
+    MockBeamExplorerClient: require('./mocks/class.MockBeamExplorerClient'),
+    MockBeamMiningClient: require('./mocks/class.MockBeamMiningClient'),
+    MockBeamWalletClient: require('./mocks/class.MockBeamWalletClient')
 };
