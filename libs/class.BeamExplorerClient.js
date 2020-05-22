@@ -107,7 +107,7 @@ class BeamExplorerClient extends EventEmitter {
      *
      * @param args
      * @param args.id {string}
-     * @param args.callback {function(err:*, {
+     * @param args.callback {function(err:*, { found: boolean, height: number }|{
      *     chainwork: string,
      *     difficulty: number,
      *     found: boolean,
@@ -149,7 +149,7 @@ class BeamExplorerClient extends EventEmitter {
      *
      * @param args
      * @param args.id {string}
-     * @param args.callback {function(err:*, {
+     * @param args.callback {function(err:*, { found: boolean, height: number }|{
      *     chainwork: string,
      *     difficulty: number,
      *     found: boolean,
@@ -191,7 +191,7 @@ class BeamExplorerClient extends EventEmitter {
      *
      * @param args
      * @param args.id {string}
-     * @param args.callback {function(err:*, {
+     * @param args.callback {function(err:*, { found: boolean, height: number }|{
      *     chainwork: string,
      *     difficulty: number,
      *     found: boolean,
