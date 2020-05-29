@@ -13,7 +13,7 @@ const client = new BeamExplorerClient({
 });
 
 client.getBlockAt({
-    height: 10,
+    height: 604690,
     callback: (err, block) => {
         if (err)
             throw err;
@@ -23,7 +23,17 @@ client.getBlockAt({
         assert.strictEqual(typeof block.found, 'boolean');
         assert.strictEqual(typeof block.hash, 'string');
         assert.strictEqual(typeof block.height, 'number');
+
         assert.strictEqual(Array.isArray(block.inputs), true);
+        block.inputs.forEach(input => {
+            assert.strictEqual(typeof input.commitment, 'string');
+            assert.strictEqual(typeof input.maturity, 'number');
+
+            // added Beam5.0
+            assert.strictEqual(typeof input.extra, 'string');
+            assert.strictEqual(typeof input.height, 'number');
+            assert.strictEqual(typeof input.extraOMap, 'object');
+        });
 
         assert.strictEqual(Array.isArray(block.kernels), true);
         block.kernels.forEach(kernel => {
@@ -32,6 +42,10 @@ client.getBlockAt({
             assert.strictEqual(typeof kernel.id, 'string');
             assert.strictEqual(typeof kernel.maxHeight, 'number');
             assert.strictEqual(typeof kernel.minHeight, 'number');
+
+            // added Beam5.0
+            assert.strictEqual(typeof kernel.extra, 'string');
+            assert.strictEqual(typeof kernel.extraOMap, 'object');
         });
 
         assert.strictEqual(Array.isArray(block.outputs), true);
@@ -40,6 +54,10 @@ client.getBlockAt({
             assert.strictEqual(typeof out.commitment, 'string');
             assert.strictEqual(typeof out.incubation, 'number');
             assert.strictEqual(typeof out.maturity, 'number');
+
+            // added Beam 5.0
+            assert.strictEqual(typeof out.extra, 'string');
+            assert.strictEqual(typeof out.extraOMap, 'object');
         });
 
         assert.strictEqual(typeof block.prev, 'string');

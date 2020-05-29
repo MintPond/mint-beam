@@ -4,6 +4,7 @@ const
     assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
+    mu = require('@mintpond/mint-utils'),
     BeamWalletClient = require('./../../libs/class.BeamWalletClient');
 
 const config = _getConfig().wallet;
@@ -19,9 +20,11 @@ client.txList({
 
         assert.strictEqual(Array.isArray(txList), true);
         txList.forEach(entry => {
+            assert.strictEqual(typeof entry.asset_id, 'number');
             assert.strictEqual(typeof entry.comment, 'string');
+            mu.isDefined(entry.confirmations) && assert.strictEqual(typeof entry.confirmations, 'number');
             assert.strictEqual(typeof entry.create_time, 'number');
-            assert.strictEqual(typeof entry.failure_reason, 'string');
+            mu.isDefined(entry.failure_reason) && assert.strictEqual(typeof entry.failure_reason, 'string');
             assert.strictEqual(typeof entry.fee, 'number');
             assert.strictEqual(typeof entry.income, 'boolean');
             assert.strictEqual(typeof entry.receiver, 'string');

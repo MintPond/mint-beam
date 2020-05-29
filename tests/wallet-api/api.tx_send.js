@@ -1,6 +1,7 @@
 'use strict';
 
 const
+    assert = require('assert'),
     async = require('async'),
     fs = require('fs'),
     path = require('path'),
@@ -19,7 +20,7 @@ async.series([
 
     sCallback => {
         client.createAddress({
-            expire: BeamAddressExpire.EXPIRED,
+            expire: BeamAddressExpire.HOURS_24,
             comment: 'API test',
             callback: (err, addr) => {
                 if (err)
@@ -41,7 +42,7 @@ async.series([
                 if (err)
                     throw err;
 
-                console.log(result);
+                assert.strictEqual(typeof result.txId, 'string');
                 sCallback();
             }
         });

@@ -47,6 +47,7 @@ class BeamMiningClient extends EventEmitter {
         _._currentJob = null;
         _._isConnected = false;
         _._connectTimeout = null;
+        _._forkHeightOMap = {};
     }
 
 
@@ -145,6 +146,12 @@ class BeamMiningClient extends EventEmitter {
      * @returns {boolean}
      */
     get isSecure() { return this._connectArgs.isSecure; }
+
+    /**
+     * Get fork heights (after successful login)
+     * @returns {{...:number}}
+     */
+    get forkHeightOMap() { return this._forkHeightOMap; }
 
 
     /**
@@ -386,6 +393,15 @@ class BeamMiningClient extends EventEmitter {
             jsonrpc: '2.0'
         }, (reply) => {
             if (reply.code === 0/*Success*/) {
+
+                // record fork height property values
+                _._forkHeightOMap = {};
+                Object.keys(reply)
+                    .filter(propName => propName.startsWith('forkheight'))
+                    .forEach(propName => {
+                        _._forkHeightOMap[propName] = reply[propName];
+                    });
+
                 callback(null);
             }
             else {

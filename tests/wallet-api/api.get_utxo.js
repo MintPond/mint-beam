@@ -19,7 +19,7 @@ client.getUTXO({
 
         assert.strictEqual(Array.isArray(utxoArr), true);
         utxoArr.forEach(utxo => {
-            assert.strictEqual(typeof utxo.id, 'number');
+            assert.strictEqual(typeof utxo.id, 'string');
             assert.strictEqual(typeof utxo.asset_id, 'number');
             assert.strictEqual(typeof utxo.amount, 'number');
             assert.strictEqual(typeof utxo.maturity, 'number');

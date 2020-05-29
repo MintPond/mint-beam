@@ -13,10 +13,16 @@ const client = new BeamWalletClient({
 });
 
 client.validateAddress({
-    address: '3d6b2f96b162a153fd6e2c1463f2ede8cee6e063f02cc0ef8ea69dac28965b4f938',
+    address: '2f0b6996cd2b5647af074197136931afb49787bae1d5c820452c9d501bbb95e041a',
     callback: (err, result) => {
+
+        console.log(err);
+        console.log(result);
+
         if (err)
             throw err;
+
+
 
         assert.strictEqual(typeof result, 'object');
         assert.strictEqual(Object.keys(result).length, 2);

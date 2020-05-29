@@ -6,7 +6,7 @@ const
     path = require('path'),
     BeamExplorerClient = require('./../../libs/class.BeamExplorerClient');
 
-const TESTNET_HASH = '3348ebfe45cb766679d61ab93353c71884bcef680dc4cd23b6a74e93e7944b9a';
+const TESTNET_HASH = '7ed5e8290927038b5e9df79e0654cc8e67ca915deea196068d37b08f069830a4';
 
 const config = _getConfig().explorer;
 const client = new BeamExplorerClient({
@@ -25,7 +25,17 @@ client.getBlock({
         assert.strictEqual(typeof block.found, 'boolean');
         assert.strictEqual(typeof block.hash, 'string');
         assert.strictEqual(typeof block.height, 'number');
+
         assert.strictEqual(Array.isArray(block.inputs), true);
+        block.inputs.forEach(input => {
+            assert.strictEqual(typeof input.commitment, 'string');
+            assert.strictEqual(typeof input.maturity, 'number');
+
+            // added Beam5.0
+            assert.strictEqual(typeof input.extra, 'string');
+            assert.strictEqual(typeof input.height, 'number');
+            assert.strictEqual(typeof input.extraOMap, 'object');
+        });
 
         assert.strictEqual(Array.isArray(block.kernels), true);
         block.kernels.forEach(kernel => {
@@ -34,6 +44,10 @@ client.getBlock({
             assert.strictEqual(typeof kernel.id, 'string');
             assert.strictEqual(typeof kernel.maxHeight, 'number');
             assert.strictEqual(typeof kernel.minHeight, 'number');
+
+            // added Beam5.0
+            assert.strictEqual(typeof kernel.extra, 'string');
+            assert.strictEqual(typeof kernel.extraOMap, 'object');
         });
 
         assert.strictEqual(Array.isArray(block.outputs), true);
@@ -42,6 +56,10 @@ client.getBlock({
             assert.strictEqual(typeof out.commitment, 'string');
             assert.strictEqual(typeof out.incubation, 'number');
             assert.strictEqual(typeof out.maturity, 'number');
+
+            // added Beam 5.0
+            assert.strictEqual(typeof out.extra, 'string');
+            assert.strictEqual(typeof out.extraOMap, 'object');
         });
 
         assert.strictEqual(typeof block.prev, 'string');

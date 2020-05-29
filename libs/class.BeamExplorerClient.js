@@ -6,6 +6,7 @@ const
     https = require('https'),
     precon = require('@mintpond/mint-precon'),
     JsonBuffer = require('@mintpond/mint-socket').JsonBuffer,
+    mu = require('@mintpond/mint-utils'),
     pu = require('@mintpond/mint-utils').prototypes;
 
 
@@ -118,8 +119,13 @@ class BeamExplorerClient extends EventEmitter {
      *     found: boolean,
      *     hash: string,
      *     height: number,
-     *     inputs: [],
+     *     inputs: {
+     *         commitment: string,
+     *         maturity: number
+     *     }[],
      *     kernels: {
+     *         extra: string
+     *         extraOMap: {...}
      *         excess: string,
      *         fee: number,
      *         id: string,
@@ -127,6 +133,13 @@ class BeamExplorerClient extends EventEmitter {
      *         minHeight: number
      *     }[],
      *     outputs: {
+     *         extra: string,
+     *         extraOMap: {
+     *             Coinbase?: boolean,
+     *             Value: number,
+     *             Maturity: number,
+     *             ...
+     *         },
      *         coinbase: boolean,
      *         commitment: string,
      *         incubation: number,
@@ -145,7 +158,10 @@ class BeamExplorerClient extends EventEmitter {
         const id = args.id;
         const callback = args.callback;
 
-        _.$get(`block?hash=${id}`, _.$createConnectArgs('getBlock', args), callback);
+        _.$get(`block?hash=${id}`, _.$createConnectArgs('getBlock', args), (err, block) => {
+            block && _._stabilizeBlockApi(block);
+            callback(err, block);
+        });
     }
 
 
@@ -160,8 +176,13 @@ class BeamExplorerClient extends EventEmitter {
      *     found: boolean,
      *     hash: string,
      *     height: number,
-     *     inputs: [],
+     *     inputs: {
+     *         commitment: string,
+     *         maturity: number
+     *     }[],
      *     kernels: {
+     *         extra: string
+     *         extraOMap: {...}
      *         excess: string,
      *         fee: number,
      *         id: string,
@@ -169,6 +190,13 @@ class BeamExplorerClient extends EventEmitter {
      *         minHeight: number
      *     }[],
      *     outputs: {
+     *         extra: string,
+     *         extraOMap: {
+     *             Coinbase?: boolean,
+     *             Value: number,
+     *             Maturity: number,
+     *             ...
+     *         },
      *         coinbase: boolean,
      *         commitment: string,
      *         incubation: number,
@@ -187,7 +215,10 @@ class BeamExplorerClient extends EventEmitter {
         const height = args.height;
         const callback = args.callback;
 
-        _.$get(`block?height=${height}`, _.$createConnectArgs('getBlockAt', args), callback);
+        _.$get(`block?height=${height}`, _.$createConnectArgs('getBlockAt', args), (err, block) => {
+            block && _._stabilizeBlockApi(block);
+            callback(err, block);
+        });
     }
 
 
@@ -202,8 +233,13 @@ class BeamExplorerClient extends EventEmitter {
      *     found: boolean,
      *     hash: string,
      *     height: number,
-     *     inputs: [],
+     *     inputs: {
+     *         commitment: string,
+     *         maturity: number
+     *     }[],
      *     kernels: {
+     *         extra: string
+     *         extraOMap: {...}
      *         excess: string,
      *         fee: number,
      *         id: string,
@@ -211,6 +247,13 @@ class BeamExplorerClient extends EventEmitter {
      *         minHeight: number
      *     }[],
      *     outputs: {
+     *         extra: string,
+     *         extraOMap: {
+     *             Coinbase?: boolean,
+     *             Value: number,
+     *             Maturity: number,
+     *             ...
+     *         },
      *         coinbase: boolean,
      *         commitment: string,
      *         incubation: number,
@@ -229,7 +272,10 @@ class BeamExplorerClient extends EventEmitter {
         const id = args.id;
         const callback = args.callback;
 
-        _.$get(`block?kernel=${id}`, _.$createConnectArgs('getBlockByKernel', args), callback);
+        _.$get(`block?kernel=${id}`, _.$createConnectArgs('getBlockByKernel', args), (err, block) => {
+            block && _._stabilizeBlockApi(block);
+            callback(err, block);
+        });
     }
 
 
@@ -245,8 +291,13 @@ class BeamExplorerClient extends EventEmitter {
      *     found: boolean,
      *     hash: string,
      *     height: number,
-     *     inputs: [],
+     *     inputs: {
+     *         commitment: string,
+     *         maturity: number
+     *     }[],
      *     kernels: {
+     *         extra: string
+     *         extraOMap: {...}
      *         excess: string,
      *         fee: number,
      *         id: string,
@@ -254,6 +305,13 @@ class BeamExplorerClient extends EventEmitter {
      *         minHeight: number
      *     }[],
      *     outputs: {
+     *         extra: string,
+     *         extraOMap: {
+     *             Coinbase?: boolean,
+     *             Value: number,
+     *             Maturity: number,
+     *             ...
+     *         },
      *         coinbase: boolean,
      *         commitment: string,
      *         incubation: number,
@@ -274,7 +332,11 @@ class BeamExplorerClient extends EventEmitter {
         const count = args.count;
         const callback = args.callback;
 
-        _.$get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs('getBlocks', args), callback);
+        _.$get(`blocks?height=${height}&n=${count}`, _.$createConnectArgs('getBlocks', args),
+            (err, blocksArr) => {
+                Array.isArray(blocksArr) && blocksArr.forEach(block => _._stabilizeBlockApi(block));
+                callback(err, blocksArr);
+            });
     }
 
 
@@ -470,6 +532,79 @@ class BeamExplorerClient extends EventEmitter {
         });
 
         req.end();
+    }
+
+
+    _stabilizeBlockApi(block) {
+
+        const _ = this;
+
+        block.inputs && block.inputs.forEach(input => {
+
+            // "maturity" property removed in Beam 5.0
+            mu.isUndefined(input.maturity) && (input.maturity = input.height + 240);
+
+            // Create an object map of the "extra" property added in Beam 5.0
+            _._parseExtra(input);
+        });
+
+        block.kernels && block.kernels.forEach(kernel => {
+
+            // "excess" property removed in Beam 5.0
+            mu.isUndefined(kernel.excess) && (kernel.excess = '');
+
+            // Create an object map of the "extra" property added in Beam 5.0
+            _._parseExtra(kernel);
+        });
+
+        block.outputs && block.outputs.forEach(out => {
+
+            // "coinbase" property removed in Beam 5.0
+            mu.isUndefined(out.coinbase) && (out.coinbase = false);
+
+            // "incubation" property removed in Beam 5.0
+            mu.isUndefined(out.incubation) && (out.incubation = 0);
+
+            // "maturity" property removed in Beam 5.0
+            mu.isUndefined(out.maturity) && (out.maturity = block.height + 240);
+
+            // Create an object map of the "extra" property added in Beam 5.0
+            _._parseExtra(out);
+        });
+    }
+
+
+    // Create an object map of the "extra" property added in Beam 5.0
+    _parseExtra(entry) {
+
+        entry.extraOMap = {};
+
+        if (!mu.isString(entry.extra))
+            return;
+
+        entry.extra.split(',').forEach(ex => {
+            ex = ex.trim();
+            const partsArr = ex.split('=');
+
+            switch (partsArr[0]) {
+                case 'Coinbase':
+                    mu.isDefined(entry.coinbase) && (entry.coinbase = true);
+                    entry.extraOMap.Coinbase = true;
+                    break;
+
+                case 'Value':
+                    entry.extraOMap.Value = parseInt(partsArr[1]);
+                    break;
+
+                case 'Maturity':
+                    entry.maturity = parseInt(partsArr[1]);
+                    entry.extraOMap.Maturity = entry.maturity;
+                    break;
+
+                default:
+                    entry.extraOMap[partsArr[0]] = !!partsArr[1] ? partsArr[1] : true;
+            }
+        });
     }
 
 

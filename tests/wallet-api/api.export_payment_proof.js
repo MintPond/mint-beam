@@ -1,6 +1,7 @@
 'use strict';
 
 const
+    assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
     BeamWalletClient = require('./../../libs/class.BeamWalletClient');
@@ -12,12 +13,12 @@ const client = new BeamWalletClient({
 });
 
 client.exportPaymentProof({
-    txId: '',
+    txId: '2908437d7e654765aaa4ecf68af8f5c6',
     callback: (err, result) => {
         if (err)
             throw err;
 
-        console.log(result);
+        assert.strictEqual(typeof result.payment_proof, 'string');
     }
 });
 

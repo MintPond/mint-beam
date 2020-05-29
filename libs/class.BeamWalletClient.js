@@ -351,9 +351,12 @@ s     */
      * @param args
      * @param args.txId {string}
      * @param args.callback {function(err:*, {
+     *     asset_id: number,
      *     comment: string,
+     *     confirmations: number,
      *     create_time: number,
      *     fee: number,
+     *     height: number,
      *     income: boolean,
      *     kernel: string,
      *     receiver: string,
@@ -361,6 +364,8 @@ s     */
      *     status: number,
      *     status_string: string,
      *     txId: string,
+     *     tx_type: number,
+     *     tx_type_string: string,
      *     value: number
      * })}
      */
@@ -393,16 +398,21 @@ s     */
      * @param [args.skip] {number}
      * @param [args.count] {number}
      * @param args.callback {function(err:*, {
+     *      assert_id: number,
      *      comment: string,
+     *      confirmations?: number,
      *      creature_time: number,
-     *      failure_reason: string,
+     *      failure_reason?: string,
      *      fee: number,
      *      income: boolean,
+     *      kernel: string,
      *      receiver: string,
      *      sender: string,
      *      status: number,
      *      status_string: string,
      *      txId: string,
+     *      tx_type: number,
+     *      tx_type_string: string,
      *      value: number
      * }[] )}
      */

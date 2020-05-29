@@ -16,6 +16,7 @@ client.getStatus({
     callback: (err, status) => {
         if (err)
             throw err;
+        console.log(status);
 
         assert.strictEqual(typeof status.chainwork, 'string');
         assert.strictEqual(typeof status.hash, 'string');

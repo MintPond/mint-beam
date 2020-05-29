@@ -27,8 +27,14 @@ client.addrList({
             assert.strictEqual(typeof entry.duration, 'number');
             assert.strictEqual(typeof entry.expired, 'boolean');
             assert.strictEqual(typeof entry.identity, 'string');
-            assert.strictEqual(entry.own, true);
-            assert.strictEqual(typeof entry.ownIDBase64, 'string');
+            assert.strictEqual(typeof entry.own, 'boolean');
+
+            // removed Beam 5.0
+            //assert.strictEqual(typeof entry.ownIDBase64, 'string');
+
+            // added Beam 5.0
+            assert.strictEqual(typeof entry.own_id, 'number');
+            assert.strictEqual(typeof entry.own_id_str, 'string');
         });
     }
 });

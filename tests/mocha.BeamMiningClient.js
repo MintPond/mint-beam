@@ -47,7 +47,9 @@ function setupLogin() {
                 method: 'result',
                 id: 'login',
                 code: 0,
-                description: 'success'
+                description: 'success',
+                forkheight: 10,
+                forkheight2: 21
             });
         }
     };
@@ -131,6 +133,13 @@ describe('BeamStratumClient', () => {
 
         it('should return correct value from isSecure property', () => {
             assert.strictEqual(client.isSecure, IS_SECURE);
+        });
+
+        it('should return correct value from forkHeightOMap property', () => {
+            assert.deepEqual(client.forkHeightOMap, {
+                forkheight: 10,
+                forkheight2: 21
+            });
         });
     });
 
