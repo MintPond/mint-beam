@@ -194,7 +194,7 @@ class BeamMiningClient extends EventEmitter {
      * Submit share solution.
      *
      * @param args
-     * @param args.beamJobIdHex {string}
+     * @param args.beamJobId {string}
      * @param args.nonceHex {string}
      * @param args.outputHex {string}
      * @param args.callback {function(err:*, result:{
@@ -204,13 +204,13 @@ class BeamMiningClient extends EventEmitter {
      * })}
      */
     submitSolution(args) {
-        precon.string(args.beamJobIdHex, 'beamJobIdHex');
+        precon.string(args.beamJobId, 'beamJobId');
         precon.string(args.nonceHex, 'nonceHex');
         precon.string(args.outputHex, 'outputHex');
         precon.funct(args.callback, 'callback');
 
         const _ = this;
-        const beamJobIdHex = args.beamJobIdHex;
+        const beamJobId = args.beamJobId;
         const nonceHex = args.nonceHex;
         const outputHex = args.outputHex;
         const callback = args.callback;
@@ -221,7 +221,7 @@ class BeamMiningClient extends EventEmitter {
         }
 
         _.$send({
-            id: beamJobIdHex,
+            id: beamJobId,
             method: 'solution',
             nonce: nonceHex,
             output: outputHex,

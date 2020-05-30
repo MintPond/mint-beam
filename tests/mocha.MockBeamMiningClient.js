@@ -53,7 +53,7 @@ describe('MockBeamMiningClient', () => {
             client._submitSolutionResult = 'result';
             client.connect(() => {
                 client.submitSolution({
-                    beamJobIdHex: '000001',
+                    beamJobId: '1',
                     nonceHex: 'nonce',
                     outputHex: 'output',
                     callback: (err, result) => {

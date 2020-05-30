@@ -357,7 +357,7 @@ describe('BeamStratumClient', () => {
                 });
             };
             client.submitSolution({
-                beamJobIdHex: '1',
+                beamJobId: '1',
                 nonceHex: 'FFFFFFFFFFFF',
                 outputHex: 'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE',
                 callback: () => {
