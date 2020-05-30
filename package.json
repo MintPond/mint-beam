@@ -1,6 +1,6 @@
 {
   "name": "@mintpond/mint-beam",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Beam Coin API clients and utils for NodeJS",
   "author": "JCThePants",
   "main": "index.js",
