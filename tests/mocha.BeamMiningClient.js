@@ -60,12 +60,12 @@ describe('BeamStratumClient', () => {
 
     before(done => {
         server = net.createServer(netSocket => {
-            socket = new JsonSocket({ netSocket: netSocket });
-            socket.on(TcpSocket.EVENT_MESSAGE_IN, ev => {
+            const s = socket = new JsonSocket({ netSocket: netSocket });
+            s.on(TcpSocket.EVENT_MESSAGE_IN, ev => {
                 apiReceiverFn(ev.message);
             });
             apiSendFn = function(message) {
-                socket.send(message);
+                s.send(message);
             };
         });
         server.listen(PORT, () => { done() });
@@ -155,7 +155,22 @@ describe('BeamStratumClient', () => {
             }, 10);
         });
 
+        it('should emit EVENT_SOCKET_CONNECT if connect successfully', done => {
+            client.once(BeamMiningClient.EVENT_SOCKET_CONNECT, () => {
+                done();
+            });
+            client.connect();
+        });
+
         it('should login to stratum server', done => {
+            setupLogin();
+            client.once(BeamMiningClient.EVENT_LOGIN, () => {
+                done();
+            });
+            client.connect();
+        });
+
+        it('should emit EVENT_LOGIN when login to stratum server', done => {
             apiReceiverFn = (message) => {
                 assert.strictEqual(message.api_key, API_KEY);
                 assert.strictEqual(message.id, 'login');
@@ -197,7 +212,7 @@ describe('BeamStratumClient', () => {
                 assert.strictEqual(ev.host, HOST);
                 assert.strictEqual(ev.port, 2);
                 assert.strictEqual(ev.isSecure, IS_SECURE);
-                assert.strictEqual(ev.reconnectCount, 0);
+                assert.strictEqual(ev.retryCount, 0);
                 done();
             });
             client.connect();
@@ -207,10 +222,10 @@ describe('BeamStratumClient', () => {
             this.timeout(7000);
             client._port = 2;
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     ev.reconnect();
                 }
-                else if (ev.reconnectCount === 1) {
+                else if (ev.retryCount === 1) {
                     done();
                 }
                 else {
@@ -224,12 +239,12 @@ describe('BeamStratumClient', () => {
             this.timeout(7000);
             client._port = 2;
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     ev.reconnect(() => {
                         done();
                     });
                 }
-                else if (ev.reconnectCount !== 1) {
+                else if (ev.retryCount !== 1) {
                     throw new Error('Unexpected outcome');
                 }
             });
@@ -241,7 +256,7 @@ describe('BeamStratumClient', () => {
             client._port = 2;
             setupLogin();
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     ev.reconnect({
                         host: 'localhost',
                         port: PORT
@@ -265,7 +280,7 @@ describe('BeamStratumClient', () => {
             setupLogin();
             let callCount = 0;
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     ev.reconnect(() => {
                         callCount++;
                     });
@@ -275,7 +290,7 @@ describe('BeamStratumClient', () => {
                 }
             });
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     ev.reconnect({
                         port: PORT
                     }, () => {
@@ -297,7 +312,7 @@ describe('BeamStratumClient', () => {
             setupLogin();
             let startTimeMs = 0;
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     startTimeMs = Date.now();
                     ev.reconnect({
                         host: 'localhost'
@@ -307,7 +322,7 @@ describe('BeamStratumClient', () => {
                         done();
                     });
                 }
-                else if (ev.reconnectCount !== 1) {
+                else if (ev.retryCount !== 1) {
                     throw new Error('Unexpected outcome');
                 }
             });
@@ -320,7 +335,7 @@ describe('BeamStratumClient', () => {
             setupLogin();
             let startTimeMs = 0;
             client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, ev => {
-                if (ev.reconnectCount === 0) {
+                if (ev.retryCount === 0) {
                     startTimeMs = Date.now();
                     ev.reconnect(2000, () => {
                         const delayMs = Date.now() - startTimeMs;
@@ -328,13 +343,51 @@ describe('BeamStratumClient', () => {
                         done();
                     });
                 }
-                else if (ev.reconnectCount !== 1) {
+                else if (ev.retryCount !== 1) {
                     throw new Error('Unexpected outcome');
                 }
             });
             client.connect();
         });
     });
+
+    describe('resetConnection function', () => {
+        beforeEach(globalBe);
+        beforeEach(connectBe);
+        afterEach(globalAe);
+
+        it('should callback', done => {
+            client.resetConnection(done);
+        });
+
+        it('should do nothing if already connected via default configuration', done => {
+            client.on(BeamMiningClient.EVENT_SOCKET_CONNECT, () => {
+                throw new Error('Unexpected emit');
+            });
+            client.on(BeamMiningClient.EVENT_SOCKET_DISCONNECT, () => {
+                throw new Error('Unexpected emit');
+            });
+            client.resetConnection(done);
+        });
+
+        it('should disconnect if not currently using default configuration', done => {
+
+            client._connectArgs.apiKey = 'backup-key';
+            client.on(BeamMiningClient.EVENT_SOCKET_CONNECT, () => {
+                done();
+            });
+            client.resetConnection();
+        });
+
+        it('should connect if not currently using default configuration', done => {
+            client._connectArgs.apiKey = 'backup-key';
+            client.on(BeamMiningClient.EVENT_SOCKET_CONNECT, () => {
+                assert.strictEqual(client.apiKey, client.defaultApiKey);
+                done();
+            });
+            client.resetConnection();
+        });
+    })
 
     describe('submitSolution function', () => {
         beforeEach(globalBe);

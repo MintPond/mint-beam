@@ -52,6 +52,12 @@ class BeamMiningClient extends EventEmitter {
 
 
     /**
+     * The name of the event emitted when the stratum login is successful.
+     * @returns {string}
+     */
+    static get EVENT_LOGIN() { return 'login' }
+
+    /**
      * The name of the event emitted when a job is received.
      * @returns {string}
      */
@@ -68,6 +74,12 @@ class BeamMiningClient extends EventEmitter {
      * @returns {string}
      */
     static get EVENT_UNKNOWN_METHOD() { return 'unknownMethod' }
+
+    /**
+     * The name of the event emitted when the connection is established.
+     * @returns {string}
+     */
+    static get EVENT_SOCKET_CONNECT() { return 'socketConnect' }
 
     /**
      * The name of the event emitted when a socket error occurs.
@@ -176,17 +188,46 @@ class BeamMiningClient extends EventEmitter {
 
     /**
      * Disconnect from Beam mining node.
+     *
+     * @param [callback] {function()}
      */
-    disconnect() {
+    disconnect(callback) {
         const _ = this;
 
         _._isConnected = false;
         clearTimeout(_._connectTimeout);
-        if (!_._socket)
+        if (!_._socket) {
+            callback && setImmediate(callback);
             return;
+        }
 
+        callback && _._socket.once(TcpSocket.EVENT_DISCONNECT, () => {
+            callback();
+        });
         _._socket.destroy();
         _._socket = null;
+    }
+
+
+    /**
+     * Reset to default connection. Does nothing if the connection is already default or not connected.
+     *
+     * @param [callback] {function(err:*)}
+     */
+    resetConnection(callback) {
+        precon.opt_funct(callback, 'callback');
+
+        const _ = this;
+        if (!_.isConnected ||
+            (_.host === _.defaultHost && _.port === _.defaultPort && _.apiKey === _.defaultApiKey && _.isSecure === _.defaultIsSecure)) {
+            // nothing to reset
+            callback && setImmediate(callback);
+            return;
+        }
+
+        _.disconnect(() => {
+            _.connect(callback);
+        });
     }
 
 
@@ -265,7 +306,7 @@ class BeamMiningClient extends EventEmitter {
             port: _._port,
             apiKey: _._apiKey,
             isSecure: _._isSecure,
-            reconnectCount: 0
+            retryCount: 0
         };
     }
 
@@ -298,6 +339,9 @@ class BeamMiningClient extends EventEmitter {
              */
             reconnect(args, delayMs, callback) {
 
+                if (!_.isConnected)
+                    throw new Error('Cannot reconnect');
+
                 if (mu.isFunction(args)) {
                     callback = args;
                     delayMs = 0;
@@ -318,7 +362,7 @@ class BeamMiningClient extends EventEmitter {
                 _._connectArgs = {
                     ..._.$createConnectArgs(),
                     ...args,
-                    reconnectCount: _._connectArgs.reconnectCount
+                    retryCount: _._connectArgs.retryCount
                 };
 
                 shouldReconnect = true;
@@ -329,7 +373,7 @@ class BeamMiningClient extends EventEmitter {
         _._socket = null;
 
         if (shouldReconnect) {
-            _._connectArgs.reconnectCount++;
+            _._connectArgs.retryCount++;
             _._isConnected = true;
             _._connectTimeout = setTimeout(() => {
                 _.$connect(_._connectArgs, err => {
@@ -345,6 +389,7 @@ class BeamMiningClient extends EventEmitter {
             }
             _._replyMap.clear();
             _._socket = null;
+            _._isConnected = false;
         }
     }
 
@@ -359,15 +404,29 @@ class BeamMiningClient extends EventEmitter {
 
             netSocket.off('error', onConnectError);
 
+            _.emit(BeamMiningClient.EVENT_SOCKET_CONNECT, {
+                ...connectArgs
+            });
+
             _.$login(connectArgs.apiKey, (err) => {
 
-                if (!err)
-                    connectArgs.reconnectCount = 0;
+                if (!err) {
+                    connectArgs.retryCount = 0;
+
+                    _.emit(BeamMiningClient.EVENT_LOGIN, {
+                        ...connectArgs
+                    });
+                }
 
                 callback && callback(err);
                 callback = null;
             });
         });
+
+        _._socket = new JsonSocket({ netSocket: netSocket });
+        _._socket.on(TcpSocket.EVENT_DISCONNECT, _.$onDisconnect.bind(_));
+        _._socket.on(TcpSocket.EVENT_ERROR, _.$onError.bind(_));
+        _._socket.on(TcpSocket.EVENT_MESSAGE_IN, _._onMessage.bind(_));
 
         netSocket.once('error', onConnectError);
 
@@ -375,11 +434,6 @@ class BeamMiningClient extends EventEmitter {
             callback && callback(err);
             callback = null;
         }
-
-        _._socket = new JsonSocket({ netSocket: netSocket });
-        _._socket.on(TcpSocket.EVENT_DISCONNECT, _.$onDisconnect.bind(_));
-        _._socket.on(TcpSocket.EVENT_ERROR, _.$onError.bind(_));
-        _._socket.on(TcpSocket.EVENT_MESSAGE_IN, _._onMessage.bind(_));
     }
 
 
