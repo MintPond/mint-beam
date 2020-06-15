@@ -760,9 +760,9 @@ s     */
             const buffer = new JsonBuffer();
             const messagesArr = [];
             const timeout = setTimeout(() => {
-                callback && callback(new Error(`Wallet API request timed out: ${reqObj.method}`));
+                callback && _.$handleSocketError(new Error(`Wallet API request timed out: ${reqObj.method}`), reqObj, connectArgs, callback);
                 callback = null;
-            }, 20000);
+            }, connectArgs.timeout * 1000);
 
             res.on('data', chunk => {
 

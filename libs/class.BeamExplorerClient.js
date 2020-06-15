@@ -511,9 +511,9 @@ class BeamExplorerClient extends EventEmitter {
             const buffer = new JsonBuffer();
             const messagesArr = [];
             const timeout = setTimeout(() => {
-                callback && callback(new Error(`Explorer API request timed out: ${path}`));
+                callback && _.$handleSocketError(new Error(`Explorer API request timed out: ${path}`), path, connectArgs, callback);
                 callback = null;
-            }, 20000);
+            }, connectArgs.timeout * 1000);
 
             res.on('data', chunk => {
                 buffer.append(chunk, messagesArr);
